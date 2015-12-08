@@ -19,17 +19,14 @@ package com.estsoft.pilotproject.leewonkyung.selfie;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.Dialog;
-import android.app.DialogFragment;
 import android.app.Fragment;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
+import android.graphics.Point;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.hardware.Sensor;
@@ -41,11 +38,12 @@ import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
+import android.hardware.camera2.params.MeteringRectangle;
 import android.hardware.camera2.params.StreamConfigurationMap;
-import android.media.Image;
 import android.media.ImageReader;
 import android.os.Bundle;
 import android.os.Handler;
@@ -53,37 +51,35 @@ import android.os.HandlerThread;
 import android.support.annotation.NonNull;
 import android.support.v13.app.FragmentCompat;
 import android.support.v4.app.ActivityCompat;
-import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
-import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
+import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
+import com.estsoft.pilotproject.leewonkyung.selfie.Util.CompareSizesByArea;
+import com.estsoft.pilotproject.leewonkyung.selfie.Util.ErrorDialog;
+import com.estsoft.pilotproject.leewonkyung.selfie.Util.ImageSaver;
+import com.estsoft.pilotproject.leewonkyung.selfie.Util.OnSwipeTouchListener;
+
 public class F1_Camera extends Fragment
         implements View.OnClickListener, FragmentCompat.OnRequestPermissionsResultCallback, SensorEventListener {
-
-
-
 
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
     private static final int REQUEST_CAMERA_PERMISSION = 1;
@@ -103,17 +99,24 @@ public class F1_Camera extends Fragment
     private static final int STATE_PICTURE_TAKEN = 4;       //taken
     private static final int MAX_PREVIEW_WIDTH = 1920;
     private static final int MAX_PREVIEW_HEIGHT = 1080;
-    private static final int STATE_FACING = CameraCharacteristics.LENS_FACING_FRONT;
+    private int STATE_FACING = CameraCharacteristics.LENS_FACING_FRONT;
 
     private SensorManager mSensorManager;
     private Sensor mRotationSensor;
     private static final int SENSOR_DELAY = 500 * 1000; // 500ms
     private static final int FROM_RADS_TO_DEGS = -57;
     private int mCurrentOrientation = 0;
-    Button btn_takePicture;
+    private int mPreOrientation = 0;
+    private int mCurrentEffect = 0; // 0; off.
+    private int surfaceWidth=0;
+    private int surfaceHeight=0;
+    private String mEffectArray[]; // save names of effects
+    ImageButton btn_takePicture;
     ImageButton btn_info;
     Animation anim_rotateLeft;
     Animation anim_rotateRight;
+
+
     /**
      * {@link TextureView.SurfaceTextureListener} handles several lifecycle events on a
      * {@link TextureView}.
@@ -124,6 +127,8 @@ public class F1_Camera extends Fragment
         @Override
         public void onSurfaceTextureAvailable(SurfaceTexture texture, int width, int height) {
             openCamera(width, height);
+            surfaceWidth = width;
+            surfaceHeight = height;
         }
 
         @Override
@@ -210,44 +215,10 @@ public class F1_Camera extends Fragment
 
                     break;
                 }
-//                case STATE_WAITING_LOCK: {
-//                    Integer afState = result.get(CaptureResult.CONTROL_AF_STATE);
-//                    if (afState == null) {
-//                        mState = STATE_PICTURE_TAKEN;       //added by wk. reason of the stuck problem?
-//                        captureStillPicture();
-//                    } else if (CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED == afState ||
-//                            CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED == afState) {
-//                        // CONTROL_AE_STATE can be null on some devices
-//                        Integer aeState = result.get(CaptureResult.CONTROL_AE_STATE);
-//                        if (aeState == null ||
-//                                aeState == CaptureResult.CONTROL_AE_STATE_CONVERGED) {
-//                            mState = STATE_PICTURE_TAKEN;
-//                            captureStillPicture();
-//                        } else {
-//                            runPrecaptureSequence();
-//                        }
-//                    }
-//                    break;
-//                }
-//                case STATE_WAITING_PRECAPTURE: {
-//                    // CONTROL_AE_STATE can be null on some devices
-//                    Integer aeState = result.get(CaptureResult.CONTROL_AE_STATE);
-//                    if (aeState == null ||
-//                            aeState == CaptureResult.CONTROL_AE_STATE_PRECAPTURE ||
-//                            aeState == CaptureRequest.CONTROL_AE_STATE_FLASH_REQUIRED) {
-//                        mState = STATE_WAITING_NON_PRECAPTURE;
-//                    }
-//                    break;
-//                }
-//                case STATE_WAITING_NON_PRECAPTURE: {
-//                    // CONTROL_AE_STATE can be null on some devices
-//                    Integer aeState = result.get(CaptureResult.CONTROL_AE_STATE);
-//                    if (aeState == null || aeState != CaptureResult.CONTROL_AE_STATE_PRECAPTURE) {
-//                        mState = STATE_PICTURE_TAKEN;
-//                        captureStillPicture();
-//                    }
-//                    break;
-//                }
+                case STATE_WAITING_NON_PRECAPTURE:{
+                    gotoPreviewState();
+                    break;
+                }
             }
         }
         @Override
@@ -261,7 +232,10 @@ public class F1_Camera extends Fragment
         public void onCaptureCompleted(@NonNull CameraCaptureSession session,
                                        @NonNull CaptureRequest request,
                                        @NonNull TotalCaptureResult result) {
-            process(result);
+            if(mState == STATE_WAITING_PRECAPTURE)
+                mState = STATE_PREVIEW;
+            else
+                process(result);
         }
 
     };
@@ -278,14 +252,87 @@ public class F1_Camera extends Fragment
 
     }
 
+    int clamp(int tmp, int min, int max){
+        if(tmp < min)
+            tmp = min;
+        else if (tmp > max){
+            tmp = max;
+        }
+        return tmp;
+    }
+
     @Override
     public void onViewCreated(final View view, Bundle savedInstanceState) {
 
-        btn_takePicture = (Button)view.findViewById(R.id.picture);
+        btn_takePicture = (ImageButton)view.findViewById(R.id.picture);
         btn_info = (ImageButton) view.findViewById(R.id.info);
         btn_takePicture.setOnClickListener(this);
         btn_info.setOnClickListener(this);
         mTextureView = (AutoFitTextureView) view.findViewById(R.id.texture);
+
+
+        mTextureView.setOnTouchListener(new OnSwipeTouchListener(this.getActivity().getApplicationContext()){
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                return super.onTouch(v, event);
+            }
+
+            @Override
+            public void onSwipeRight() {
+                 nextEffect();
+                gotoPreviewState();
+                showToast(mEffectArray[mCurrentEffect]);
+
+            }
+
+            @Override
+            public void onSwipeLeft() {
+                prevEffect();
+                gotoPreviewState();
+                showToast(mEffectArray[mCurrentEffect]);
+            }
+
+            @Override
+            public void onActionDown(MotionEvent event) {
+                super.onActionDown(event);
+                Rect rect=mCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+                Log.i("onAreaTouchEvent","SENSOR_INFO_ACTIVE_ARRAY_SIZE,,,,,,,,rect.left--->" + rect.left + ",,,rect.top--->"+ rect.top+ ",,,,rect.right--->"+ rect.right+ ",,,,rect.bottom---->"+ rect.bottom);
+                Size size=mCharacteristics.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE);
+                Log.i("onAreaTouchEvent","mCameraCharacteristics,,,,size.getWidth()--->" + size.getWidth() + ",,,size.getHeight()--->"+ size.getHeight());
+                int areaSize=200;
+                int right=rect.right;
+                int bottom=rect.bottom;
+                int viewWidth=mTextureView.getWidth();
+                int viewHeight=mTextureView.getHeight();
+                int ll, rr;
+                Rect newRect;
+                int centerX=(int)event.getX();
+                int centerY=(int)event.getY();
+                ll=((centerX * right) - areaSize) / viewWidth;
+                rr=((centerY * bottom) - areaSize) / viewHeight;
+                int focusLeft=clamp(ll,0,right);
+                int focusBottom=clamp(rr,0,bottom);
+                Log.i("focus_position","focusLeft--->" + focusLeft + ",,,focusTop--->"+ focusBottom+ ",,,focusRight--->"+ (focusLeft + areaSize)+ ",,,focusBottom--->"+ (focusBottom + areaSize));
+                newRect=new Rect(focusLeft,focusBottom,focusLeft + areaSize,focusBottom + areaSize);
+                MeteringRectangle meteringRectangle=new MeteringRectangle(newRect,500);
+                MeteringRectangle[] meteringRectangleArr={meteringRectangle};
+
+                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,CaptureRequest.CONTROL_AF_MODE_AUTO);
+                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
+                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_REGIONS,meteringRectangleArr);
+                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
+                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CameraMetadata.CONTROL_AE_PRECAPTURE_TRIGGER_CANCEL);
+                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_REGIONS,meteringRectangleArr);
+                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CameraMetadata.CONTROL_AE_PRECAPTURE_TRIGGER_START);
+                gotoPreviewState();
+
+            }
+        });
+
+
+
+
         try {
             mSensorManager = (SensorManager) getActivity().getSystemService(getActivity().SENSOR_SERVICE);
             mRotationSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
@@ -297,6 +344,67 @@ public class F1_Camera extends Fragment
 //        anim_rotateRight = AnimationUtils.loadAnimation(getActivity().getApplicationContext(), R.anim.rotate_right);
 //        anim_rotateLeft = AnimationUtils.loadAnimation(getActivity(),R.anim.rotate_left);
 //        anim_rotateRight = AnimationUtils.loadAnimation(getActivity(), R.anim.rotate_right);
+        anim_rotateLeft = AnimationUtils.loadAnimation(getActivity().getApplicationContext(), R.anim.rotate_left);
+        anim_rotateLeft.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {
+            }
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                switch (mCurrentOrientation){
+                    case 0:
+                        btn_takePicture.setImageResource(R.drawable.icon_shutter_0);
+                        Log.d(TAG,"shutter 0 ");
+                        break;
+                    case 90:
+                        btn_takePicture.setImageResource(R.drawable.icon_shutter_90);
+                        Log.d(TAG, "shutter 90 ");
+                        break;
+                    case 180:
+                        btn_takePicture.setImageResource(R.drawable.icon_shutter_180);
+                        Log.d(TAG,"shutter 180 ");
+                        break;
+                    case 270:
+                        btn_takePicture.setImageResource(R.drawable.icon_shutter_270);
+                        Log.d(TAG,"shutter 270 ");
+                        break;
+
+                }
+            }
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+
+            }
+        });
+
+        anim_rotateRight = AnimationUtils.loadAnimation(getActivity().getApplicationContext(), R.anim.rotate_right);
+        anim_rotateRight.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {
+            }
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                switch (mCurrentOrientation){
+                    case 0:
+                        btn_takePicture.setImageResource(R.drawable.icon_shutter_0);
+                        break;
+                    case 90:
+                        btn_takePicture.setImageResource(R.drawable.icon_shutter_90);
+                        break;
+                    case 180:
+                        btn_takePicture.setImageResource(R.drawable.icon_shutter_180);
+                        break;
+                    case 270:
+                        btn_takePicture.setImageResource(R.drawable.icon_shutter_270);
+                        break;
+
+                }
+            }
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+
+            }
+        });
     }
 
     @Override
@@ -363,9 +471,10 @@ public class F1_Camera extends Fragment
                 CameraCharacteristics characteristics
                         = manager.getCameraCharacteristics(cameraId);
                 mCharacteristics = characteristics;
-                // We don't use a front facing camera in this sample.
+                // We don't use a back facing camera in this app.
                 Integer facing = characteristics.get(CameraCharacteristics.LENS_FACING);
                 if (facing != null && facing !=STATE_FACING) {
+
                     continue;
                 }
 
@@ -377,6 +486,17 @@ public class F1_Camera extends Fragment
 
                 // added by wk. confirm that applying effects on this camera hardware is able
                 Log.d("effect list : ", characteristics.get(CameraCharacteristics.CONTROL_AVAILABLE_EFFECTS).length + "");
+                mEffectArray = new String[characteristics.get(CameraCharacteristics.CONTROL_AVAILABLE_EFFECTS).length];
+                mEffectArray[0] = "OFF";
+                mEffectArray[1] = "MONO";
+                mEffectArray[2] = "NEGATIVE";
+                mEffectArray[3] = "SOLARIZE";
+                mEffectArray[4] = "SEPIA";
+                mEffectArray[5] = "POSTERIZE";
+                mEffectArray[6] = "WHITEBOARD";
+                mEffectArray[7] = "BLACKBOARD";
+                mEffectArray[8] = "AQUA";
+
                 int modes[] = characteristics.get(CameraCharacteristics.STATISTICS_INFO_AVAILABLE_FACE_DETECT_MODES);
                 for (int i = 0; i < modes.length; i++)
                     Log.d("modes", i + " : " + modes[i]);
@@ -386,56 +506,40 @@ public class F1_Camera extends Fragment
                 mImageReader = ImageReader.newInstance(largest.getWidth(), largest.getHeight(), ImageFormat.JPEG, /*maxImages*/2);
                 mImageReader.setOnImageAvailableListener( mOnImageAvailableListener, mBackgroundHandler);
 
-                // Find out if we need to swap dimension to get the preview size relative to sensor
-                // coordinate.
-//                int displayRotation = activity.getWindowManager().getDefaultDisplay().getRotation();
-//                int sensorOrientation =
-//                        characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
-//                boolean swappedDimensions = false;
-//                switch (displayRotation) {
-//                    case Surface.ROTATION_0:
-//                    case Surface.ROTATION_180:
-//                        if (sensorOrientation == 90 || sensorOrientation == 270) {
-//                            swappedDimensions = true;
-//                        }
-//                        break;
-//                    case Surface.ROTATION_90:
-//                    case Surface.ROTATION_270:
-//                        if (sensorOrientation == 0 || sensorOrientation == 180) {
-//                            swappedDimensions = true;
-//                        }
-//                        break;
-//                    default:
-//                        Log.e(TAG, "Display rotation is invalid: " + displayRotation);
-//                }
-//
-//                Point displaySize = new Point();
-//                activity.getWindowManager().getDefaultDisplay().getSize(displaySize);
-//                int rotatedPreviewWidth = width;
-//                int rotatedPreviewHeight = height;
-//                int maxPreviewWidth = displaySize.x;
-//                int maxPreviewHeight = displaySize.y;
-//
-//                if (swappedDimensions) {
-//                    rotatedPreviewWidth = height;
-//                    rotatedPreviewHeight = width;
-//                    maxPreviewWidth = displaySize.y;
-//                    maxPreviewHeight = displaySize.x;
-//                }
-//
-//                if (maxPreviewWidth > MAX_PREVIEW_WIDTH) {
-//                    maxPreviewWidth = MAX_PREVIEW_WIDTH;
-//                }
-//
-//                if (maxPreviewHeight > MAX_PREVIEW_HEIGHT) {
-//                    maxPreviewHeight = MAX_PREVIEW_HEIGHT;
-//                }
+                ///
+                Point displaySize = new Point();
+                activity.getWindowManager().getDefaultDisplay().getSize(displaySize);
+                int rotatedPreviewWidth = width;
+                int rotatedPreviewHeight = height;
+                int maxPreviewWidth = displaySize.x;
+                int maxPreviewHeight = displaySize.y;
+
+                boolean swappedDimensions = true;
+                if (swappedDimensions) {
+                    rotatedPreviewWidth = height;
+                    rotatedPreviewHeight = width;
+                    maxPreviewWidth = displaySize.y;
+                    maxPreviewHeight = displaySize.x;
+                }
+
+                if (maxPreviewWidth > MAX_PREVIEW_WIDTH) {
+                    maxPreviewWidth = MAX_PREVIEW_WIDTH;
+                }
+
+                if (maxPreviewHeight > MAX_PREVIEW_HEIGHT) {
+                    maxPreviewHeight = MAX_PREVIEW_HEIGHT;
+                }
 
                 // Danger, W.R.! Attempting to use too large a preview size could  exceed the camera
                 // bus' bandwidth limitation, resulting in gorgeous previews but the storage of
                 // garbage capture data.
-                mPreviewSize = largest;
-//                mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), rotatedPreviewWidth, rotatedPreviewHeight, maxPreviewWidth, maxPreviewHeight, largest);
+                mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class),
+                        rotatedPreviewWidth, rotatedPreviewHeight, maxPreviewWidth,
+                        maxPreviewHeight, largest);
+                ///
+
+
+ //               mPreviewSize = largest;
 
                 // We fit the aspect ratio of TextureView to the size of preview we picked.
                 int orientation = getResources().getConfiguration().orientation;
@@ -446,7 +550,6 @@ public class F1_Camera extends Fragment
                     mTextureView.setAspectRatio(
                             mPreviewSize.getHeight(), mPreviewSize.getWidth());
                 }
-
                 mCameraId = cameraId;
                 return;
             }
@@ -468,7 +571,7 @@ public class F1_Camera extends Fragment
             return;
         }*/
         setUpCameraOutputs(width, height);
-     //   configureTransform(width, height);
+        configureTransform(width, height);
         Activity activity = getActivity();
         CameraManager manager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
         try {
@@ -485,6 +588,7 @@ public class F1_Camera extends Fragment
                 // for ActivityCompat#requestPermissions for more details.
                 return;
             }
+            Log.d(TAG, "CameraId : " +  mCameraId);
             manager.openCamera(mCameraId, mStateCallback, mBackgroundHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
@@ -516,19 +620,19 @@ public class F1_Camera extends Fragment
         int sensorOrientation = mCharacteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
        // Log.d(TAG, "sensorOrientation = " + sensorOrientation);
 
-        if (sensorOrientation == 90 || sensorOrientation == 270) {
-            bufferRect.offset(centerX - bufferRect.centerX(), centerY - bufferRect.centerY());
-            matrix.setRectToRect(viewRect, bufferRect, Matrix.ScaleToFit.FILL);
-            float scale = Math.max(
-                    (float) viewHeight / mPreviewSize.getHeight(),
-                    (float) viewWidth / mPreviewSize.getWidth());
-            matrix.postScale(scale, scale, centerX, centerY);
-            matrix.postRotate(90 * (1), centerX, centerY);
-        } else if (sensorOrientation == 0 ) {
-            matrix.postRotate(180, centerX, centerY);
-        }else if (sensorOrientation == 180 ) {
-            matrix.postRotate(0, centerX, centerY);
-        }
+//        if (sensorOrientation == 90 || sensorOrientation == 270) {
+//            bufferRect.offset(centerX - bufferRect.centerX(), centerY - bufferRect.centerY());
+//            matrix.setRectToRect(viewRect, bufferRect, Matrix.ScaleToFit.FILL);
+//            float scale = Math.max(
+//                    (float) viewHeight / mPreviewSize.getHeight(),
+//                    (float) viewWidth / mPreviewSize.getWidth());
+//            matrix.postScale(scale, scale, centerX, centerY);
+//            matrix.postRotate(90 * (1), centerX, centerY);
+//        } else if (sensorOrientation == 0 ) {
+//            matrix.postRotate(180, centerX, centerY);
+//        }else if (sensorOrientation == 180 ) {
+//            matrix.postRotate(0, centerX, centerY);
+//        }
         mTextureView.setTransform(matrix);
     }
 
@@ -614,28 +718,23 @@ public class F1_Camera extends Fragment
 
                             // When the session is ready, we start displaying the preview.
                             mCaptureSession = cameraCaptureSession;
-                            try {
-                                // added by wk, filtering
-//                                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_EFFECT_MODE, CameraMetadata.CONTROL_EFFECT_MODE_AQUA);
-                                // mPreviewRequestBuilder.set(CaptureRequest.CONTROL_SCENE_MODE, CameraMetadata.CONTROL_SCENE_MODE_FACE_PRIORITY);
-                                // mPreviewRequestBuilder.set(CaptureRequest.STATISTICS_FACE_DETECT_MODE, CameraMetadata.STATISTICS_FACE_DETECT_MODE_FULL);
 
-                                // Auto focus should be continuous for camera preview.
+                            // added by wk, filtering
+//                                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_EFFECT_MODE, CameraMetadata.CONTROL_EFFECT_MODE_AQUA);
+                            // mPreviewRequestBuilder.set(CaptureRequest.CONTROL_SCENE_MODE, CameraMetadata.CONTROL_SCENE_MODE_FACE_PRIORITY);
+                            // mPreviewRequestBuilder.set(CaptureRequest.STATISTICS_FACE_DETECT_MODE, CameraMetadata.STATISTICS_FACE_DETECT_MODE_FULL);
+
+                            // Auto focus should be continuous for camera preview.
 /*                                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
-                                        CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
-                                // Flash is automatically enabled when necessary.
-                                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE,
-                                        CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
+                                    CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+                            // Flash is automatically enabled when necessary.
+                            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE,
+                                    CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
 
 */
+                            // Finally, we start displaying the camera preview.
+                            gotoPreviewState();
 
-                                // Finally, we start displaying the camera preview.
-                                mPreviewRequest = mPreviewRequestBuilder.build();
-                                mCaptureSession.setRepeatingRequest(mPreviewRequest,
-                                        mCaptureCallback, mBackgroundHandler);
-                            } catch (CameraAccessException e) {
-                                e.printStackTrace();
-                            }
                         }
 
                         @Override
@@ -665,6 +764,7 @@ public class F1_Camera extends Fragment
                             .setPositiveButton(android.R.string.ok, null)
                             .show();
                 }
+
                 break;
             }
         }
@@ -709,9 +809,8 @@ public class F1_Camera extends Fragment
             // Use the same AE and AF modes as the preview.
             captureBuilder.set(CaptureRequest.CONTROL_AF_MODE,
                     CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
-            captureBuilder.set(CaptureRequest.CONTROL_AE_MODE,
-                    CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
 
+            captureBuilder.set(CaptureRequest.CONTROL_EFFECT_MODE, mCurrentEffect);
             // Orientation
 //            int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
 //            int sensorOrientation = mCharacteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
@@ -728,9 +827,9 @@ public class F1_Camera extends Fragment
                     showToast("Saved: " + mFile);
                     Log.d(TAG, mFile.toString());
                     gotoPreviewState();
+
                 }
             };
-
             mCaptureSession.stopRepeating();
             mCaptureSession.capture(captureBuilder.build(), CaptureCallback, null);
         } catch (CameraAccessException e) {
@@ -747,9 +846,12 @@ public class F1_Camera extends Fragment
             // Reset the auto-focus trigger
 //            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
 //            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
-            mCaptureSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback, mBackgroundHandler);
+            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_EFFECT_MODE, mCurrentEffect);
+            mPreviewRequest = mPreviewRequestBuilder.build();
+          //  mCaptureSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback, mBackgroundHandler);
             // After this, the camera will go back to the normal state of preview.
-            mState = STATE_PREVIEW;
+            mState = STATE_WAITING_PRECAPTURE;
+            mCaptureSession.stopRepeating();
             mCaptureSession.setRepeatingRequest(mPreviewRequest, mCaptureCallback, mBackgroundHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
@@ -787,9 +889,9 @@ public class F1_Camera extends Fragment
         SensorManager.getOrientation(adjustedRotationMatrix, orientation);
         float pitch = orientation[1] * FROM_RADS_TO_DEGS;
         float roll = orientation[2] * FROM_RADS_TO_DEGS;
-        Log.d(TAG, "Pitch : " + pitch);
-        Log.d(TAG, "Roll : " + roll);
-        int preOrientation = mCurrentOrientation;   // temp saved value
+//        Log.d(TAG, "Pitch : " + pitch);
+//        Log.d(TAG, "Roll : " + roll);
+        mPreOrientation = mCurrentOrientation;   // temp saved value
         if( -45 <= roll && roll < 45 ) {
             mCurrentOrientation = 0;
 
@@ -803,145 +905,28 @@ public class F1_Camera extends Fragment
             mCurrentOrientation = 180;
         }
         // button rotation.
-        if(preOrientation < mCurrentOrientation){
-            btn_takePicture.startAnimation( AnimationUtils.loadAnimation(getActivity().getApplicationContext(), R.anim.rotate_left) );
-        }else if(preOrientation > mCurrentOrientation){
-            btn_takePicture.startAnimation(AnimationUtils.loadAnimation(getActivity().getApplicationContext(), R.anim.rotate_right));
+        if((mPreOrientation==0 && mCurrentOrientation==90) ||
+                (mPreOrientation==90 && mCurrentOrientation==180) ||
+                (mPreOrientation==180 && mCurrentOrientation==270) ||
+                (mPreOrientation==270 && mCurrentOrientation==0)){
+            btn_takePicture.startAnimation(anim_rotateRight);
+
+        }else if((mPreOrientation==90 && mCurrentOrientation==0) ||
+                (mPreOrientation==180 && mCurrentOrientation==90) ||
+                (mPreOrientation==270 && mCurrentOrientation==180) ||
+                (mPreOrientation==0 && mCurrentOrientation==270)){
+            btn_takePicture.startAnimation(anim_rotateLeft);
         }
     }
 
 
-    /**
-     * Saves a JPEG {@link Image} into the specified {@link File}.
-     */
-    private static class ImageSaver implements Runnable {
-
-        /**
-         * The JPEG image
-         */
-        private final Image mImage;
-        /**
-         * The file we save the image into.
-         */
-        private final File mFile;
-        int mCurrentOrientation ;
-        public ImageSaver(Image image, File file, int currentOrientation) {
-            mImage = image;
-            mFile = file;
-            mCurrentOrientation = currentOrientation;
-        }
-
-        @Override
-        public void run() {
-            ByteBuffer buffer = mImage.getPlanes()[0].getBuffer();
-            byte[] bytes = new byte[buffer.remaining()];
-            buffer.get(bytes);
-
-            // flip horizontally.
-            Bitmap bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-            Bitmap flipped =  flipAndRotate(bmp);
-            FileOutputStream output = null;
-
-            ByteArrayOutputStream stream = new ByteArrayOutputStream();
-            flipped.compress(Bitmap.CompressFormat.JPEG, 100, stream);        //quality : 0 to 100
-            byte[] flippedImageByteArray = stream.toByteArray();
-
-            try {
-               output = new FileOutputStream(mFile);
-               output.write(flippedImageByteArray); // fixed : not flipped
-              // output.write(bytes);           // original : flipped
-                Log.d(TAG, "writeImage ! ");
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                mImage.close();
-                if (null != output) {
-                    try {
-                        output.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }
-
-        Bitmap flipAndRotate(Bitmap d)
-        {
-            Matrix m = new Matrix();
-            m.preScale(-1, 1);
-
-            switch(mCurrentOrientation){
-                case 0:
-                    m.postRotate(90);
-                    break;
-                case 90:
-                    m.postRotate(0);
-                    break;
-                case 270:
-                    m.postRotate(180);
-                    break;
-                case 180:
-                    m.postRotate(270);
-
-            }
-
-
-            Bitmap src = d;
-            Bitmap dst = Bitmap.createBitmap(src, 0, 0, src.getWidth(), src.getHeight(), m, false);
-            dst.setDensity(DisplayMetrics.DENSITY_DEFAULT);
-            return  dst;
-        }
-
-    }
 
 
 
 
 
-    /**
-     * Compares two {@code Size}s based on their areas.
-     */
-    static class CompareSizesByArea implements Comparator<Size> {
 
-        @Override
-        public int compare(Size lhs, Size rhs) {
-            // We cast here to ensure the multiplications won't overflow
-            return Long.signum((long) lhs.getWidth() * lhs.getHeight() -
-                    (long) rhs.getWidth() * rhs.getHeight());
-        }
 
-    }
-
-    /**
-     * Shows an error message dialog.
-     */
-    public static class ErrorDialog extends DialogFragment {
-
-        private static final String ARG_MESSAGE = "message";
-
-        public static ErrorDialog newInstance(String message) {
-            ErrorDialog dialog = new ErrorDialog();
-            Bundle args = new Bundle();
-            args.putString(ARG_MESSAGE, message);
-            dialog.setArguments(args);
-            return dialog;
-        }
-
-        @Override
-        public Dialog onCreateDialog(Bundle savedInstanceState) {
-            final Activity activity = getActivity();
-            return new AlertDialog.Builder(activity)
-                    .setMessage(getArguments().getString(ARG_MESSAGE))
-                    .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialogInterface, int i) {
-                            activity.finish();
-                        }
-                    })
-                    .create();
-        }
-
-    }
 
     /**
      * Shows a {@link Toast} on the UI thread.
@@ -959,6 +944,65 @@ public class F1_Camera extends Fragment
             });
         }
     }
+
+    public void nextEffect(){
+        this.mCurrentEffect = (mCurrentEffect + 1)%9;
+    }
+    public void prevEffect(){
+        this.mCurrentEffect  =  mCurrentEffect - 1;
+        if(mCurrentEffect == -1)
+            mCurrentEffect = 8;
+    }
+
+    /**
+     * Given {@code choices} of {@code Size}s supported by a camera, choose the smallest one that
+     * is at least as large as the respective texture view size, and that is at most as large as the
+     * respective max size, and whose aspect ratio matches with the specified value. If such size
+     * doesn't exist, choose the largest one that is at most as large as the respective max size,
+     * and whose aspect ratio matches with the specified value.
+     *
+     * @param choices           The list of sizes that the camera supports for the intended output
+     *                          class
+     * @param textureViewWidth  The width of the texture view relative to sensor coordinate
+     * @param textureViewHeight The height of the texture view relative to sensor coordinate
+     * @param maxWidth          The maximum width that can be chosen
+     * @param maxHeight         The maximum height that can be chosen
+     * @param aspectRatio       The aspect ratio
+     * @return The optimal {@code Size}, or an arbitrary one if none were big enough
+     */
+    private static Size chooseOptimalSize(Size[] choices, int textureViewWidth,
+                                          int textureViewHeight, int maxWidth, int maxHeight, Size aspectRatio) {
+
+        // Collect the supported resolutions that are at least as big as the preview Surface
+        List<Size> bigEnough = new ArrayList<>();
+        // Collect the supported resolutions that are smaller than the preview Surface
+        List<Size> notBigEnough = new ArrayList<>();
+        int w = aspectRatio.getWidth();
+        int h = aspectRatio.getHeight();
+        for (Size option : choices) {
+            if (option.getWidth() <= maxWidth && option.getHeight() <= maxHeight &&
+                    option.getHeight() == option.getWidth() * h / w) {
+                if (option.getWidth() >= textureViewWidth &&
+                        option.getHeight() >= textureViewHeight) {
+                    bigEnough.add(option);
+                } else {
+                    notBigEnough.add(option);
+                }
+            }
+        }
+
+        // Pick the smallest of those big enough. If there is no one big enough, pick the
+        // largest of those not big enough.
+        if (bigEnough.size() > 0) {
+            return Collections.min(bigEnough, new CompareSizesByArea());
+        } else if (notBigEnough.size() > 0) {
+            return Collections.max(notBigEnough, new CompareSizesByArea());
+        } else {
+            Log.e(TAG, "Couldn't find any suitable preview size");
+            return choices[0];
+        }
+    }
+
 
 
 }

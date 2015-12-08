@@ -18,7 +18,11 @@ package com.estsoft.pilotproject.leewonkyung.selfie;
 
 import android.content.Context;
 import android.util.AttributeSet;
+import android.view.MotionEvent;
 import android.view.TextureView;
+import android.view.View;
+
+import com.estsoft.pilotproject.leewonkyung.selfie.Util.OnSwipeTouchListener;
 
 /**
  * A {@link TextureView} that can be adjusted to a specified aspect ratio.
