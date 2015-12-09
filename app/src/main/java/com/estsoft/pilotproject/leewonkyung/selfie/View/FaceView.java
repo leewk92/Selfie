@@ -11,6 +11,7 @@ import android.util.AttributeSet;
 import android.util.SparseArray;
 import android.view.View;
 
+import com.estsoft.pilotproject.leewonkyung.selfie.R;
 import com.google.android.gms.vision.face.Face;
 import com.google.android.gms.vision.face.Landmark;
 
@@ -60,6 +61,7 @@ public class FaceView extends View {
         double scale = Math.min(viewWidth / imageWidth, viewHeight / imageHeight);
 
         Rect destBounds = new Rect(0, 0, (int)(imageWidth * scale), (int)(imageHeight * scale));
+
         canvas.drawBitmap(mBitmap, null, destBounds, null);
         return scale;
     }

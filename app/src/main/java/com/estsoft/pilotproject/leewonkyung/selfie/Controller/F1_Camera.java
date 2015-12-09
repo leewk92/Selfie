@@ -308,36 +308,36 @@ public class F1_Camera extends Fragment
             @Override
             public void onActionDown(MotionEvent event) {
                 super.onActionDown(event);
-                Rect rect=mCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
-                Log.i("onAreaTouchEvent","SENSOR_INFO_ACTIVE_ARRAY_SIZE,,,,,,,,rect.left--->" + rect.left + ",,,rect.top--->"+ rect.top+ ",,,,rect.right--->"+ rect.right+ ",,,,rect.bottom---->"+ rect.bottom);
-                Size size=mCharacteristics.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE);
-                Log.i("onAreaTouchEvent","mCameraCharacteristics,,,,size.getWidth()--->" + size.getWidth() + ",,,size.getHeight()--->"+ size.getHeight());
-                int areaSize=200;
-                int right=rect.right;
-                int bottom=rect.bottom;
-                int viewWidth=mTextureView.getWidth();
-                int viewHeight=mTextureView.getHeight();
-                int ll, rr;
-                Rect newRect;
-                int centerX=(int)event.getX();
-                int centerY=(int)event.getY();
-                ll=((centerX * right) - areaSize) / viewWidth;
-                rr=((centerY * bottom) - areaSize) / viewHeight;
-                int focusLeft=clamp(ll,0,right);
-                int focusBottom=clamp(rr,0,bottom);
-                Log.i("focus_position","focusLeft--->" + focusLeft + ",,,focusTop--->"+ focusBottom+ ",,,focusRight--->"+ (focusLeft + areaSize)+ ",,,focusBottom--->"+ (focusBottom + areaSize));
-                newRect=new Rect(focusLeft,focusBottom,focusLeft + areaSize,focusBottom + areaSize);
-                MeteringRectangle meteringRectangle=new MeteringRectangle(newRect,500);
-                MeteringRectangle[] meteringRectangleArr={meteringRectangle};
-
-                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,CaptureRequest.CONTROL_AF_MODE_AUTO);
-                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
-                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_REGIONS,meteringRectangleArr);
-                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
-                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CameraMetadata.CONTROL_AE_PRECAPTURE_TRIGGER_CANCEL);
-                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_REGIONS,meteringRectangleArr);
-                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CameraMetadata.CONTROL_AE_PRECAPTURE_TRIGGER_START);
-                gotoPreviewState();
+//                Rect rect=mCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+//                Log.i("onAreaTouchEvent","SENSOR_INFO_ACTIVE_ARRAY_SIZE,,,,,,,,rect.left--->" + rect.left + ",,,rect.top--->"+ rect.top+ ",,,,rect.right--->"+ rect.right+ ",,,,rect.bottom---->"+ rect.bottom);
+//                Size size=mCharacteristics.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE);
+//                Log.i("onAreaTouchEvent","mCameraCharacteristics,,,,size.getWidth()--->" + size.getWidth() + ",,,size.getHeight()--->"+ size.getHeight());
+//                int areaSize=200;
+//                int right=rect.right;
+//                int bottom=rect.bottom;
+//                int viewWidth=mTextureView.getWidth();
+//                int viewHeight=mTextureView.getHeight();
+//                int ll, rr;
+//                Rect newRect;
+//                int centerX=(int)event.getX();
+//                int centerY=(int)event.getY();
+//                ll=((centerX * right) - areaSize) / viewWidth;
+//                rr=((centerY * bottom) - areaSize) / viewHeight;
+//                int focusLeft=clamp(ll,0,right);
+//                int focusBottom=clamp(rr,0,bottom);
+//                Log.i("focus_position","focusLeft--->" + focusLeft + ",,,focusTop--->"+ focusBottom+ ",,,focusRight--->"+ (focusLeft + areaSize)+ ",,,focusBottom--->"+ (focusBottom + areaSize));
+//                newRect=new Rect(focusLeft,focusBottom,focusLeft + areaSize,focusBottom + areaSize);
+//                MeteringRectangle meteringRectangle=new MeteringRectangle(newRect,500);
+//                MeteringRectangle[] meteringRectangleArr={meteringRectangle};
+//
+//                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,CaptureRequest.CONTROL_AF_MODE_AUTO);
+//                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
+//                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_REGIONS,meteringRectangleArr);
+//                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
+//                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CameraMetadata.CONTROL_AE_PRECAPTURE_TRIGGER_CANCEL);
+//                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_REGIONS,meteringRectangleArr);
+//                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CameraMetadata.CONTROL_AE_PRECAPTURE_TRIGGER_START);
+//                gotoPreviewState();
 
             }
         });
@@ -865,9 +865,12 @@ public class F1_Camera extends Fragment
         mStillCaptureRequestBuilder.addTarget(mImageReader.getSurface());
 
         // Use the same AE and AF modes as the preview.
-        mStillCaptureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
-                CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
-
+        mStillCaptureRequestBuilder.set(CaptureRequest.CONTROL_EFFECT_MODE, mCurrentEffect);
+        mStillCaptureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+        mStillCaptureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON);
+        mStillCaptureRequestBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO);
+        mStillCaptureRequestBuilder.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_FACE_PRIORITY);
+        mStillCaptureRequestBuilder.set(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY);
     }
 
 
@@ -934,6 +937,13 @@ public class F1_Camera extends Fragment
 //            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
 //            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
             mPreviewRequestBuilder.set(CaptureRequest.CONTROL_EFFECT_MODE, mCurrentEffect);
+            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON);
+            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO);
+            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_FACE_PRIORITY);
+            mPreviewRequestBuilder.set(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_ZERO_SHUTTER_LAG);
+
+
             mPreviewRequest = mPreviewRequestBuilder.build();
           //  mCaptureSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback, mBackgroundHandler);
             // After this, the camera will go back to the normal state of preview.
