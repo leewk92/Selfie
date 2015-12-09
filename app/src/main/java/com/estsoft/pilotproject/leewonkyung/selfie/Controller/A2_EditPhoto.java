@@ -1,4 +1,4 @@
-package com.estsoft.pilotproject.leewonkyung.selfie;
+package com.estsoft.pilotproject.leewonkyung.selfie.Controller;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -6,17 +6,18 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.graphics.RectF;
-import android.graphics.drawable.Drawable;
-import android.media.Image;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.estsoft.pilotproject.leewonkyung.selfie.R;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -30,7 +31,7 @@ import uk.co.senab.photoview.PhotoViewAttacher.OnPhotoTapListener;
 /**
  * Created by LeeWonKyung on 2015-12-07.
  */
-public class A2_EditPhoto extends Activity {
+public class A2_EditPhoto extends Activity implements View.OnClickListener {
 
 
     public static A2_EditPhoto newInstance() {
@@ -39,14 +40,20 @@ public class A2_EditPhoto extends Activity {
 
     static final String PHOTO_TAP_TOAST_STRING = "Photo Tap! X: %.2f %% Y:%.2f %% ID: %d";
     static final String SCALE_TOAST_STRING = "Scaled to: %.2ff";
-
+    private File mFile;
     private TextView mCurrMatrixTv;
-
     private PhotoViewAttacher mAttacher;
-
     private Toast mCurrentToast;
-
     private Matrix mCurrentDisplayMatrix = null;
+
+    private ImageButton edit;
+    private ImageButton share;
+    private ImageButton camera;
+    private ImageButton sticker;
+    private ImageButton save;
+
+
+
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -76,6 +83,19 @@ public class A2_EditPhoto extends Activity {
         // Lets attach some listeners, not required though!
         mAttacher.setOnMatrixChangeListener(new MatrixChangeListener());
         mAttacher.setOnPhotoTapListener(new PhotoTapListener());
+
+        edit = (ImageButton)findViewById(R.id.edit);
+        share = (ImageButton)findViewById(R.id.share);
+        camera = (ImageButton)findViewById(R.id.camera);
+        sticker = (ImageButton)findViewById(R.id.sticker);
+        save = (ImageButton)findViewById(R.id.save);
+
+        edit.setOnClickListener(this);
+        share.setOnClickListener(this);
+        camera.setOnClickListener(this);
+        sticker.setOnClickListener(this);
+        save.setOnClickListener(this);
+
     }
 
     @Override
@@ -160,13 +180,13 @@ public class A2_EditPhoto extends Activity {
             case R.id.extract_visible_bitmap:
                 try {
                     Bitmap bmp = mAttacher.getVisibleRectangleBitmap();
-                    File tmpFile = File.createTempFile("photoview", ".png",
-                            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS));
+                    File tmpFile = File.createTempFile("photoview", ".jpeg",
+                            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM));
                     FileOutputStream out = new FileOutputStream(tmpFile);
-                    bmp.compress(Bitmap.CompressFormat.PNG, 90, out);
+                    bmp.compress(Bitmap.CompressFormat.JPEG, 100, out);
                     out.close();
                     Intent share = new Intent(Intent.ACTION_SEND);
-                    share.setType("image/png");
+                    share.setType("image/jpeg");
                     share.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(tmpFile));
                     startActivity(share);
                     Toast.makeText(this, String.format("Extracted into: %s", tmpFile.getAbsolutePath()), Toast.LENGTH_SHORT).show();
@@ -205,6 +225,91 @@ public class A2_EditPhoto extends Activity {
         @Override
         public void onMatrixChanged(RectF rect) {
             mCurrMatrixTv.setText(rect.toString());
+        }
+    }
+
+
+    @Override
+    public void onClick(View view) {
+        switch (view.getId()) {
+
+            case R.id.edit: {
+                break;
+            }
+
+            case R.id.share: {
+
+                try {
+                    Bitmap bmp = mAttacher.getVisibleRectangleBitmap();
+                    mFile = File.createTempFile("photoview", ".jpeg",
+                            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM));
+                    FileOutputStream out = new FileOutputStream(mFile);
+                    bmp.compress(Bitmap.CompressFormat.JPEG, 100, out);
+                    out.close();
+
+                    Intent share = new Intent(Intent.ACTION_SEND);
+                    share.setType("image/jpeg");
+                    share.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(mFile));
+                    startActivity(share);
+
+                    Toast.makeText(this, String.format("Extracted into: %s", mFile.getAbsolutePath()), Toast.LENGTH_SHORT).show();
+                } catch (Throwable t) {
+                    t.printStackTrace();
+                    Toast.makeText(this, "Error occured while sharing image", Toast.LENGTH_SHORT).show();
+                }
+
+                break;
+            }
+
+            case R.id.camera: {
+
+                this.finish();
+
+                break;
+            }
+            case R.id.sticker: {
+
+                try {
+                    Bitmap bmp = mAttacher.getVisibleRectangleBitmap();
+                    mFile = File.createTempFile("photoview", ".jpeg",
+                            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM));
+                    FileOutputStream out = new FileOutputStream(mFile);
+                    bmp.compress(Bitmap.CompressFormat.JPEG, 100, out);
+                    out.close();
+
+                    Intent intent = new Intent(this , A2_4_Sticker.class);
+                    intent.putExtra("image_filepath", mFile.getAbsolutePath());
+                    startActivity(intent);
+
+                    //Toast.makeText(this, String.format("Extracted into: %s", mFile.getAbsolutePath()), Toast.LENGTH_SHORT).show();
+                } catch (Throwable t) {
+                    t.printStackTrace();
+                    Toast.makeText(this, "Error occured while transfer image to sticker activity", Toast.LENGTH_SHORT).show();
+                }
+
+
+
+
+                break;
+            }
+            case R.id.save: {
+
+                try {
+                    Bitmap bmp = mAttacher.getVisibleRectangleBitmap();
+                    mFile = File.createTempFile("photoview", ".jpeg",
+                            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM));
+                    FileOutputStream out = new FileOutputStream(mFile);
+                    bmp.compress(Bitmap.CompressFormat.JPEG, 100, out);
+                    out.close();
+
+                    Toast.makeText(this, String.format("Extracted into: %s", mFile.getAbsolutePath()), Toast.LENGTH_SHORT).show();
+                } catch (Throwable t) {
+                    t.printStackTrace();
+                    Toast.makeText(this, "Error occured while extracting bitmap", Toast.LENGTH_SHORT).show();
+                }
+
+                break;
+            }
         }
     }
 

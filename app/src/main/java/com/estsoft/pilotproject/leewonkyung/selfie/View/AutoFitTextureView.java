@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.estsoft.pilotproject.leewonkyung.selfie;
+package com.estsoft.pilotproject.leewonkyung.selfie.View;
 
 import android.content.Context;
 import android.util.AttributeSet;

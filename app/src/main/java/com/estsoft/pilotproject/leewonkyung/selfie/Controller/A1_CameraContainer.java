@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-package com.estsoft.pilotproject.leewonkyung.selfie;
+package com.estsoft.pilotproject.leewonkyung.selfie.Controller;
 
 import android.app.Activity;
 import android.os.Bundle;
 import android.view.animation.Animation;
-import android.view.animation.AnimationUtils;
+
+import com.estsoft.pilotproject.leewonkyung.selfie.R;
 
 public class A1_CameraContainer extends Activity {
     Animation anim_rotateLeft;

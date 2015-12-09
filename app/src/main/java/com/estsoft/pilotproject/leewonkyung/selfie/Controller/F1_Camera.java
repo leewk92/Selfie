@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.estsoft.pilotproject.leewonkyung.selfie;
+package com.estsoft.pilotproject.leewonkyung.selfie.Controller;
 
 import android.Manifest;
 import android.app.Activity;
@@ -75,10 +75,12 @@ import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
+import com.estsoft.pilotproject.leewonkyung.selfie.R;
 import com.estsoft.pilotproject.leewonkyung.selfie.Util.CompareSizesByArea;
 import com.estsoft.pilotproject.leewonkyung.selfie.Util.ErrorDialog;
 import com.estsoft.pilotproject.leewonkyung.selfie.Util.ImageSaver;
 import com.estsoft.pilotproject.leewonkyung.selfie.Util.OnSwipeTouchListener;
+import com.estsoft.pilotproject.leewonkyung.selfie.View.AutoFitTextureView;
 
 public class F1_Camera extends Fragment
         implements View.OnClickListener, FragmentCompat.OnRequestPermissionsResultCallback, SensorEventListener {
