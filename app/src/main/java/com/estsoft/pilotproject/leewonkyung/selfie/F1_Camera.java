@@ -21,8 +21,10 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Fragment;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.Bitmap;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.Point;
@@ -181,21 +183,28 @@ public class F1_Camera extends Fragment
         }
 
     };
-
+    private Activity mActivity;
     private HandlerThread mBackgroundThread; //An additional thread for running tasks that shouldn't block the UI.
     private Handler mBackgroundHandler; //for running tasks in the background.
     private ImageReader mImageReader; // handles still image capture.
     private File mFile; //This is the output file for our picture.
+    private ImageSaver mImageSaver;
+    private Bitmap outputBitmap;
     private final ImageReader.OnImageAvailableListener mOnImageAvailableListener
             = new ImageReader.OnImageAvailableListener() {
 
         @Override
         public void onImageAvailable(ImageReader reader) {
-            mBackgroundHandler.post(new ImageSaver(reader.acquireNextImage(), mFile, mCurrentOrientation));
-
+            mImageSaver = new ImageSaver(reader.acquireNextImage(), mFile, mCurrentOrientation);
+            mBackgroundHandler.post(mImageSaver);
+            outputBitmap = mImageSaver.getOutputBitmap();
         }
 
     };
+
+    private CaptureRequest.Builder mStillCaptureRequestBuilder;
+    private CaptureRequest mStillCaptureRequest;
+
     private CaptureRequest.Builder mPreviewRequestBuilder;
     private CaptureRequest mPreviewRequest;
     private CameraCharacteristics mCharacteristics;
@@ -264,6 +273,7 @@ public class F1_Camera extends Fragment
     @Override
     public void onViewCreated(final View view, Bundle savedInstanceState) {
 
+        mActivity = this.getActivity();
         btn_takePicture = (ImageButton)view.findViewById(R.id.picture);
         btn_info = (ImageButton) view.findViewById(R.id.info);
         btn_takePicture.setOnClickListener(this);
@@ -351,25 +361,25 @@ public class F1_Camera extends Fragment
             }
             @Override
             public void onAnimationEnd(Animation animation) {
-                switch (mCurrentOrientation){
-                    case 0:
-                        btn_takePicture.setImageResource(R.drawable.icon_shutter_0);
-                        Log.d(TAG,"shutter 0 ");
-                        break;
-                    case 90:
-                        btn_takePicture.setImageResource(R.drawable.icon_shutter_90);
-                        Log.d(TAG, "shutter 90 ");
-                        break;
-                    case 180:
-                        btn_takePicture.setImageResource(R.drawable.icon_shutter_180);
-                        Log.d(TAG,"shutter 180 ");
-                        break;
-                    case 270:
-                        btn_takePicture.setImageResource(R.drawable.icon_shutter_270);
-                        Log.d(TAG,"shutter 270 ");
-                        break;
-
-                }
+//                switch (mCurrentOrientation){
+//                    case 0:
+//                        btn_takePicture.setImageResource(R.drawable.icon_shutter_0);
+//                        Log.d(TAG,"shutter 0 ");
+//                        break;
+//                    case 90:
+//                        btn_takePicture.setImageResource(R.drawable.icon_shutter_90);
+//                        Log.d(TAG, "shutter 90 ");
+//                        break;
+//                    case 180:
+//                        btn_takePicture.setImageResource(R.drawable.icon_shutter_180);
+//                        Log.d(TAG,"shutter 180 ");
+//                        break;
+//                    case 270:
+//                        btn_takePicture.setImageResource(R.drawable.icon_shutter_270);
+//                        Log.d(TAG,"shutter 270 ");
+//                        break;
+//
+//                }
             }
             @Override
             public void onAnimationRepeat(Animation animation) {
@@ -384,21 +394,21 @@ public class F1_Camera extends Fragment
             }
             @Override
             public void onAnimationEnd(Animation animation) {
-                switch (mCurrentOrientation){
-                    case 0:
-                        btn_takePicture.setImageResource(R.drawable.icon_shutter_0);
-                        break;
-                    case 90:
-                        btn_takePicture.setImageResource(R.drawable.icon_shutter_90);
-                        break;
-                    case 180:
-                        btn_takePicture.setImageResource(R.drawable.icon_shutter_180);
-                        break;
-                    case 270:
-                        btn_takePicture.setImageResource(R.drawable.icon_shutter_270);
-                        break;
-
-                }
+//                switch (mCurrentOrientation){
+//                    case 0:
+//                        btn_takePicture.setImageResource(R.drawable.icon_shutter_0);
+//                        break;
+//                    case 90:
+//                        btn_takePicture.setImageResource(R.drawable.icon_shutter_90);
+//                        break;
+//                    case 180:
+//                        btn_takePicture.setImageResource(R.drawable.icon_shutter_180);
+//                        break;
+//                    case 270:
+//                        btn_takePicture.setImageResource(R.drawable.icon_shutter_270);
+//                        break;
+//
+//                }
             }
             @Override
             public void onAnimationRepeat(Animation animation) {
@@ -411,6 +421,7 @@ public class F1_Camera extends Fragment
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
         mFile = new File(getActivity().getExternalFilesDir(null) , "pic.jpg");
+
     }
 
     @Override
@@ -795,6 +806,69 @@ public class F1_Camera extends Fragment
 //        }
 //    }
 
+
+
+//
+//    private void captureStillPicture() {
+//        try {
+//            final Activity activity = getActivity();
+//            if (null == activity || null == mCameraDevice) {
+//                return;
+//            }
+//            // This is the CaptureRequest.Builder that we use to take a picture.
+//            final CaptureRequest.Builder captureBuilder =
+//                    mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+//            captureBuilder.addTarget(mImageReader.getSurface());
+//
+//            // Use the same AE and AF modes as the preview.
+//            captureBuilder.set(CaptureRequest.CONTROL_AF_MODE,
+//                    CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+//
+//            captureBuilder.set(CaptureRequest.CONTROL_EFFECT_MODE, mCurrentEffect);
+//            // Orientation
+////            int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
+////            int sensorOrientation = mCharacteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
+//            Log.d(TAG, "mCurrentOrientation : " + mCurrentOrientation);
+//          //  captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, ); // not working.
+//
+//            CameraCaptureSession.CaptureCallback CaptureCallback
+//                    = new CameraCaptureSession.CaptureCallback() {
+//
+//                @Override
+//                public void onCaptureCompleted(@NonNull CameraCaptureSession session,
+//                                               @NonNull CaptureRequest request,
+//                                               @NonNull TotalCaptureResult result) {
+//                    showToast("Saved: " + mFile);
+//                    Log.d(TAG, mFile.toString());
+//
+//                    Intent intent = new Intent(mActivity , A2_EditPhoto.class);
+//                    intent.putExtra("image_filepath", mImageSaver.getOutputFilepath());
+//                    startActivity(intent);
+//                    // gotoPreviewState();
+//
+//                }
+//            };
+//            mCaptureSession.stopRepeating();
+//            mCaptureSession.capture(captureBuilder.build(), CaptureCallback, null);
+//        } catch (CameraAccessException e) {
+//            e.printStackTrace();
+//        }
+//    }
+
+// for test, wk
+
+    private void preCaptureStillPicture() throws CameraAccessException {
+        mStillCaptureRequestBuilder =
+                mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+        mStillCaptureRequestBuilder.addTarget(mImageReader.getSurface());
+
+        // Use the same AE and AF modes as the preview.
+        mStillCaptureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
+                CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+
+    }
+
+
     private void captureStillPicture() {
         try {
             final Activity activity = getActivity();
@@ -802,23 +876,28 @@ public class F1_Camera extends Fragment
                 return;
             }
             // This is the CaptureRequest.Builder that we use to take a picture.
-            final CaptureRequest.Builder captureBuilder =
-                    mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
-            captureBuilder.addTarget(mImageReader.getSurface());
 
-            // Use the same AE and AF modes as the preview.
-            captureBuilder.set(CaptureRequest.CONTROL_AF_MODE,
-                    CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+            preCaptureStillPicture();
 
-            captureBuilder.set(CaptureRequest.CONTROL_EFFECT_MODE, mCurrentEffect);
+            mStillCaptureRequestBuilder.set(CaptureRequest.CONTROL_EFFECT_MODE, mCurrentEffect);
             // Orientation
 //            int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
 //            int sensorOrientation = mCharacteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
             Log.d(TAG, "mCurrentOrientation : " + mCurrentOrientation);
-          //  captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, ); // not working.
+            //  captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, ); // not working.
 
             CameraCaptureSession.CaptureCallback CaptureCallback
                     = new CameraCaptureSession.CaptureCallback() {
+
+                @Override
+                public void onCaptureStarted(CameraCaptureSession session, CaptureRequest request, long timestamp, long frameNumber) {
+                    super.onCaptureStarted(session, request, timestamp, frameNumber);
+                    try {
+                        mCaptureSession.stopRepeating();
+                    } catch (CameraAccessException e) {
+                        e.printStackTrace();
+                    }
+                }
 
                 @Override
                 public void onCaptureCompleted(@NonNull CameraCaptureSession session,
@@ -826,16 +905,22 @@ public class F1_Camera extends Fragment
                                                @NonNull TotalCaptureResult result) {
                     showToast("Saved: " + mFile);
                     Log.d(TAG, mFile.toString());
-                    gotoPreviewState();
+
+                    Intent intent = new Intent(mActivity , A2_EditPhoto.class);
+                    intent.putExtra("image_filepath", mImageSaver.getOutputFilepath());
+                    startActivity(intent);
+                    // gotoPreviewState();
 
                 }
             };
-            mCaptureSession.stopRepeating();
-            mCaptureSession.capture(captureBuilder.build(), CaptureCallback, null);
+
+            mCaptureSession.capture(mStillCaptureRequestBuilder.build(), CaptureCallback, null);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
     }
+
+
 
     /**
      * Unlock the focus. This method should be called when still image capture sequence is

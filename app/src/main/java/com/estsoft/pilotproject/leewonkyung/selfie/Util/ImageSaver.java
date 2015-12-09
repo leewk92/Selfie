@@ -26,6 +26,9 @@ public class ImageSaver implements Runnable {
      * The file we save the image into.
      */
     private final File mFile;
+
+    private Bitmap outputBitmap;
+
     int mCurrentOrientation ;
     public ImageSaver(Image image, File file, int currentOrientation) {
         mImage = image;
@@ -42,6 +45,9 @@ public class ImageSaver implements Runnable {
         // flip horizontally.
         Bitmap bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
         Bitmap flipped =  flipAndRotate(bmp);
+
+        outputBitmap = flipped.copy( flipped.getConfig(), true);
+
         FileOutputStream output = null;
 
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
@@ -94,4 +100,14 @@ public class ImageSaver implements Runnable {
         return  dst;
     }
 
+    public Bitmap getOutputBitmap() {
+        return outputBitmap;
+    }
+    public String getOutputFilepath(){
+
+        Log.d("fileAbsolutePath : ", mFile.getAbsolutePath());
+        Log.d("filepath : ", mFile.getPath());
+        Log.d("filename : ", mFile.getName());
+        return mFile.getPath();
+    }
 }
