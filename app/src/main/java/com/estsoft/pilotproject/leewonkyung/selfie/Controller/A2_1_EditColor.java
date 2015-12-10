@@ -4,10 +4,12 @@ import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.ColorMatrix;
 import android.graphics.Matrix;
 import android.graphics.RectF;
+import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -49,6 +51,7 @@ public class A2_1_EditColor extends Activity {
     private Activity mActivity;
     private File mFile;
     private Uri mUri;
+    private String mOutputFilePath;
     private String mInputFilePath;
     private Toast mCurrentToast;
     private Matrix mCurrentDisplayMatrix = null;
@@ -68,6 +71,8 @@ public class A2_1_EditColor extends Activity {
     ImageButton btnColor = null;
     ImageButton btnCrop = null;
     ImageButton btnRotate = null;
+    ImageButton btnBack = null;
+    ImageButton btnSave = null;
 
     private int currentHue = 0;
     private int currentSaturation = 0;
@@ -109,6 +114,8 @@ public class A2_1_EditColor extends Activity {
         btnColor = (ImageButton)findViewById(R.id.btn_color);
         btnCrop = (ImageButton)findViewById(R.id.btn_crop);
         btnRotate = (ImageButton)findViewById(R.id.btn_rotate);
+        btnBack = (ImageButton)findViewById(R.id.btn_back);
+        btnSave = (ImageButton)findViewById(R.id.btn_save);
 
         SeekBar_Listener sl = new SeekBar_Listener();
         hueSeekbar.setOnSeekBarChangeListener(sl);
@@ -118,6 +125,9 @@ public class A2_1_EditColor extends Activity {
         btnColor.setOnClickListener(new ImageButton_Listener());
         btnCrop.setOnClickListener(new ImageButton_Listener());
         btnRotate.setOnClickListener(new ImageButton_Listener());
+        btnBack.setOnClickListener(new ImageButton_Listener());
+        btnSave.setOnClickListener(new ImageButton_Listener());
+
 
     }
 
@@ -126,21 +136,45 @@ public class A2_1_EditColor extends Activity {
 
         @Override
         public void onClick(View v) {
+
             switch(v.getId()){
+
+                case R.id.btn_back:
+                    try{
+                        new File(mOutputFilePath).delete();
+                    }catch(Exception e){
+
+                    }
+                    finish();
+
+                    break;
+
 
                 case R.id.btn_color:
                     layout_color.setVisibility(View.VISIBLE);
 
                     break;
                 case R.id.btn_crop :
+
                     layout_color.setVisibility(View.INVISIBLE);
                     //Crop.pickImage(mActivity);
+
                     Crop.of(mUri, mUri).start(mActivity);
 
                     break;
                 case R.id.btn_rotate :
                     layout_color.setVisibility(View.INVISIBLE);
 
+                    break;
+                case R.id.btn_save:
+
+                    getUriFromTemporaryBitmap();
+                    Intent intent = new Intent(mActivity , A2_EditPhoto.class);
+                    intent.putExtra("image_filepath", mOutputFilePath);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP );
+
+                    startActivity(intent);
+                    finish();
                     break;
             }
 
@@ -222,8 +256,9 @@ public class A2_1_EditColor extends Activity {
                     break;
             }
 
-            mImageView.setColorFilter(ColorFilterGenerator.adjustColor(currentBrightness, currentContrast, currentSaturation, currentHue));
+            mImageView.getDrawable().setColorFilter(ColorFilterGenerator.adjustColor(currentBrightness, currentContrast, currentSaturation, currentHue));
             Log.d("ColorFilter", "B : " + currentBrightness + " C : " + currentContrast + " S : " + currentSaturation + " H : " + currentHue);
+
         }
 
         @Override
@@ -236,18 +271,21 @@ public class A2_1_EditColor extends Activity {
     }
 
 
-    private String mOutputFilepath;
 
-    void saveTemporaryFile(){
+
+    private Uri getUriFromTemporaryBitmap(){
 
         OutputStream fOut = null;
-        Uri outputFileUri;
+        Uri outputFileUri = null;
+        Bitmap tmpBitmap = loadBitmapFromView(mImageView);
         try {
             File root = new File(Environment.getExternalStorageDirectory()
                     + File.separator + "Selfie" + File.separator);
             root.mkdirs();
-            File sdImageMainDirectory = new File(root, "tmp.jpg");
+            File sdImageMainDirectory = new File(root, "tmp.png");
             outputFileUri = Uri.fromFile(sdImageMainDirectory);
+
+            mOutputFilePath = sdImageMainDirectory.getPath();
             fOut = new FileOutputStream(sdImageMainDirectory);
         } catch (Exception e) {
             Toast.makeText(this, "Error occured. Please try again later.",
@@ -255,17 +293,27 @@ public class A2_1_EditColor extends Activity {
         }
 
         try {
-            bmp.compress(Bitmap.CompressFormat.PNG, 100, fOut);
+            tmpBitmap.compress(Bitmap.CompressFormat.PNG, 100, fOut);
+
+
             fOut.flush();
             fOut.close();
         } catch (Exception e) {
         }
-
+        return outputFileUri;
 
     }
 
-
-
+    private Bitmap loadBitmapFromView(View v) {
+        final int w = v.getWidth();
+        final int h = v.getHeight();
+        final Bitmap b = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+        final Canvas c = new  Canvas(b);
+        //v.layout(0, 0, w, h);
+        v.layout(v.getLeft(), v.getTop(), v.getRight(), v.getBottom());
+        v.draw(c);
+        return b;
+    }
 
 
 

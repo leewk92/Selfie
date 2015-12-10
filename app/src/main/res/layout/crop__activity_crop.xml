@@ -41,7 +41,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:padding="20dp"
-                    android:src="@drawable/ic_brightness_6_black_24dp"
+                    android:src="@drawable/ic_arrow_back_black_24dp"
                     android:layout_weight="1"/>
 
                 <ImageButton
@@ -50,7 +50,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:padding="20dp"
-                    android:src="@drawable/ic_crop_black_24dp"
+                    android:src="@drawable/ic_check_black_24dp"
                     android:layout_weight="1"/>
 
             </LinearLayout>
