@@ -33,6 +33,11 @@
             android:name=".Controller.A2_4_Sticker"
             android:screenOrientation="portrait"
             ></activity>
+        <activity
+            android:name=".Controller.A2_1_EditColor"
+            android:screenOrientation="portrait"
+            ></activity>
+        <activity android:name="com.soundcloud.android.crop.CropImageActivity" />
 
     </application>
 

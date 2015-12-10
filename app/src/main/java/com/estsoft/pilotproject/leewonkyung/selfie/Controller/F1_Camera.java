@@ -292,7 +292,7 @@ public class F1_Camera extends Fragment
 
             @Override
             public void onSwipeRight() {
-                 nextEffect();
+                nextEffect();
                 gotoPreviewState();
                 showToast(mEffectArray[mCurrentEffect]);
 
@@ -1044,11 +1044,21 @@ public class F1_Camera extends Fragment
 
     public void nextEffect(){
         this.mCurrentEffect = (mCurrentEffect + 1)%9;
+        if(mCurrentEffect == 3) // skip solarize
+            mCurrentEffect = 4;
+        else if(mCurrentEffect == 5) // skip posterize
+            mCurrentEffect = 6;
     }
     public void prevEffect(){
         this.mCurrentEffect  =  mCurrentEffect - 1;
         if(mCurrentEffect == -1)
             mCurrentEffect = 8;
+        else if(mCurrentEffect == 3) // skip solarize
+            mCurrentEffect = 2;
+        else if(mCurrentEffect == 5) // skip posterize
+            mCurrentEffect = 4;
+
+
     }
 
     /**

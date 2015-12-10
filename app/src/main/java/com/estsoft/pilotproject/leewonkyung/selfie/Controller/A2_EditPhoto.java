@@ -234,6 +234,26 @@ public class A2_EditPhoto extends Activity implements View.OnClickListener {
         switch (view.getId()) {
 
             case R.id.edit: {
+
+                try {
+                    Bitmap bmp = mAttacher.getVisibleRectangleBitmap();
+                    mFile = File.createTempFile("photoview", ".jpeg",
+                            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM));
+                    FileOutputStream out = new FileOutputStream(mFile);
+                    bmp.compress(Bitmap.CompressFormat.JPEG, 100, out);
+                    out.close();
+
+                    Intent intent = new Intent(this , A2_1_EditColor.class);
+                    intent.putExtra("image_filepath", mFile.getAbsolutePath());
+                    startActivity(intent);
+
+                    //Toast.makeText(this, String.format("Extracted into: %s", mFile.getAbsolutePath()), Toast.LENGTH_SHORT).show();
+                } catch (Throwable t) {
+                    t.printStackTrace();
+                    Toast.makeText(this, "Error occured while transfer image to sticker activity", Toast.LENGTH_SHORT).show();
+                }
+
+
                 break;
             }
 
