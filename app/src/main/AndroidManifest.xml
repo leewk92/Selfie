@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"></uses-permission>
 
     <uses-feature android:name="android.hardware.camera" />
     <uses-feature android:name="android.hardware.camera.autofocus" />
@@ -23,6 +24,10 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+
+
+
         </activity>
 
         <activity
@@ -37,6 +42,27 @@
             android:name=".Controller.A2_1_EditColor"
             android:screenOrientation="portrait"
             ></activity>
+        <activity
+            android:name=".Controller.A2_2_Share"
+            android:screenOrientation="portrait"
+            ></activity>
+
+        <activity
+            android:name=".Util.flickrhelpers.FlickrjActivity"
+            android:screenOrientation="portrait"
+            >
+
+            <!-- for using Flicker api -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="estsoft-pilotproject-leewonkyung-selfie" />
+            </intent-filter>
+
+
+        </activity>
+
         <activity android:name="com.soundcloud.android.crop.CropImageActivity" />
 
     </application>
