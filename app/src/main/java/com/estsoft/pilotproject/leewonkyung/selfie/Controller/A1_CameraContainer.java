@@ -17,6 +17,7 @@
 package com.estsoft.pilotproject.leewonkyung.selfie.Controller;
 
 import android.app.Activity;
+import android.hardware.camera2.CameraCharacteristics;
 import android.os.Bundle;
 import android.view.animation.Animation;
 
@@ -32,9 +33,10 @@ public class A1_CameraContainer extends Activity {
         setContentView(R.layout.a1_cameracontainer);
         if (null == savedInstanceState) {
             getFragmentManager().beginTransaction()
-                    .replace(R.id.container, F1_Camera.newInstance())
+                    .replace(R.id.container, F1_Camera.newInstance(CameraCharacteristics.LENS_FACING_FRONT))
                     .commit();
         }
+
 
     }
 

@@ -20,6 +20,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Fragment;
+import android.app.FragmentTransaction;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -51,9 +52,11 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.v13.app.FragmentCompat;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.FragmentManager;
 import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
@@ -105,7 +108,7 @@ public class F1_Camera extends Fragment
     private static final int STATE_PICTURE_TAKEN = 4;       //taken
     private static final int MAX_PREVIEW_WIDTH = 1920;
     private static final int MAX_PREVIEW_HEIGHT = 1080;
-    private int STATE_FACING = CameraCharacteristics.LENS_FACING_FRONT;
+    private int STATE_FACING= CameraCharacteristics.LENS_FACING_FRONT;
 
     private SensorManager mSensorManager;
     private Sensor mRotationSensor;
@@ -139,7 +142,7 @@ public class F1_Camera extends Fragment
 
         @Override
         public void onSurfaceTextureSizeChanged(SurfaceTexture texture, int width, int height) {
-            //configureTransform(width, height);
+            configureTransform(width, height);
         }
 
         @Override
@@ -254,8 +257,10 @@ public class F1_Camera extends Fragment
     };
 
 
-    public static F1_Camera newInstance() {
-        return new F1_Camera();
+    public static F1_Camera newInstance(int facing) {
+        F1_Camera returnFragment = new F1_Camera();
+        returnFragment.STATE_FACING = facing;
+        return returnFragment;
     }
 
     @Override
@@ -430,7 +435,7 @@ public class F1_Camera extends Fragment
 
     @Override
     public void onResume() {
-        mFile = new File(getActivity().getCacheDir()+File.separator + "photoview" + System.currentTimeMillis() + ".jpg");
+        mFile = new File(getActivity().getCacheDir()+File.separator + "photoview" + System.currentTimeMillis() + ".jpg");       //?
         super.onResume();
         startBackgroundThread();
 
@@ -482,20 +487,25 @@ public class F1_Camera extends Fragment
     private void setUpCameraOutputs(int width, int height) {
         Activity activity = getActivity();
         CameraManager manager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
+
+
         try {
+            Log.d("cameraidlist",manager.getCameraIdList()[0]);
+            Log.d("cameraidlist",manager.getCameraIdList()[1]);
             for (String cameraId : manager.getCameraIdList()) {
                 CameraCharacteristics characteristics
                         = manager.getCameraCharacteristics(cameraId);
                 mCharacteristics = characteristics;
                 // We don't use a back facing camera in this app.
                 Integer facing = characteristics.get(CameraCharacteristics.LENS_FACING);
-                if (facing != null && facing !=STATE_FACING) {
+                Log.d("State_Facing", ""+STATE_FACING);
 
+
+                if (facing != null && facing !=STATE_FACING) {
                     continue;
                 }
 
-                StreamConfigurationMap map = characteristics.get(
-                        CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+                StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
                 if (map == null) {
                     continue;
                 }
@@ -519,6 +529,15 @@ public class F1_Camera extends Fragment
 
                 // For still image captures, we use the largest available size.
                 Size largest = Collections.max(Arrays.asList(map.getOutputSizes(ImageFormat.JPEG)), new CompareSizesByArea());
+
+                for(int i=0; i<map.getOutputSizes(ImageFormat.JPEG).length; i++){
+                    Log.d("sizes", "(" + map.getOutputSizes(ImageFormat.JPEG)[i].getWidth() + "," + map.getOutputSizes(ImageFormat.JPEG)[i].getHeight() + ")" +  (double)map.getOutputSizes(ImageFormat.JPEG)[i].getHeight()/(double)map.getOutputSizes(ImageFormat.JPEG)[i].getWidth() );
+                }
+
+
+                if(facing == CameraCharacteristics.LENS_FACING_BACK)
+                    largest = new Size(1440,1080);
+
                 mImageReader = ImageReader.newInstance(largest.getWidth(), largest.getHeight(), ImageFormat.JPEG, /*maxImages*/2);
                 mImageReader.setOnImageAvailableListener( mOnImageAvailableListener, mBackgroundHandler);
 
@@ -531,6 +550,7 @@ public class F1_Camera extends Fragment
                 int maxPreviewHeight = displaySize.y;
 
                 boolean swappedDimensions = true;
+
                 if (swappedDimensions) {
                     rotatedPreviewWidth = height;
                     rotatedPreviewHeight = width;
@@ -545,13 +565,22 @@ public class F1_Camera extends Fragment
                 if (maxPreviewHeight > MAX_PREVIEW_HEIGHT) {
                     maxPreviewHeight = MAX_PREVIEW_HEIGHT;
                 }
+                mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class),
+                        rotatedPreviewWidth, rotatedPreviewHeight, maxPreviewWidth,
+                        maxPreviewHeight, largest);
+                Log.d("largest front",mPreviewSize.getWidth()+","+mPreviewSize.getWidth());
 
                 // Danger, W.R.! Attempting to use too large a preview size could  exceed the camera
                 // bus' bandwidth limitation, resulting in gorgeous previews but the storage of
                 // garbage capture data.
-                mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class),
-                        rotatedPreviewWidth, rotatedPreviewHeight, maxPreviewWidth,
-                        maxPreviewHeight, largest);
+
+//                if(facing == CameraCharacteristics.LENS_FACING_BACK) {
+//                    mPreviewSize = largest;
+//                    Log.d("largest back",largest.getWidth() +"," + largest.getHeight() );
+//                }
+//                else {
+//                    mPreviewSize = new Size(1920,1080);
+//                }
                 ///
 
 
@@ -702,6 +731,7 @@ public class F1_Camera extends Fragment
     }
 
 
+
     /**
      * Creates a new {@link CameraCaptureSession} for camera preview.
      */
@@ -711,7 +741,10 @@ public class F1_Camera extends Fragment
             assert texture != null;
 
             // We configure the size of default buffer to be the size of camera preview we want.
+         //   texture.setDefaultBufferSize(720,480);
             texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+            Log.d("size",mPreviewSize.getWidth() + ", " + mPreviewSize.getHeight());
+
 
             // This is the output Surface we need to start preview.
             Surface surface = new Surface(texture);
@@ -744,7 +777,7 @@ public class F1_Camera extends Fragment
 /*                                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
                                     CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
                             // Flash is automatically enabled when necessary.
-                            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE,
+                            mPreviewRequestBuilder1.set(CaptureRequest.CONTROL_AE_MODE,
                                     CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
 
 */
@@ -756,7 +789,9 @@ public class F1_Camera extends Fragment
                         @Override
                         public void onConfigureFailed(
                                 @NonNull CameraCaptureSession cameraCaptureSession) {
-                            Log.d(TAG,"Configure Failed");
+                            Log.d(TAG, "Configure Failed");
+                            //getFragmentManager().beginTransaction().replace(R.id.container, F1_Camera.newInstance(STATE_FACING)).commit();
+
                         }
                     }, null
             );
@@ -774,16 +809,65 @@ public class F1_Camera extends Fragment
             }
             case R.id.info: {
                 Activity activity = getActivity();
-                if (null != activity) {
-                    new AlertDialog.Builder(activity)
-                            .setMessage(R.string.intro_message)
-                            .setPositiveButton(android.R.string.ok, null)
-                            .show();
-                }
+//                if (null != activity) {
+//                    new AlertDialog.Builder(activity)
+//                            .setMessage(R.string.intro_message)
+//                            .setPositiveButton(android.R.string.ok, null)
+//                            .show();
+//                }
+
+                if( STATE_FACING == CameraCharacteristics.LENS_FACING_FRONT)
+                    STATE_FACING = CameraCharacteristics.LENS_FACING_BACK;
+                else
+                    STATE_FACING = CameraCharacteristics.LENS_FACING_FRONT;
+                getFragmentManager().beginTransaction().replace(R.id.container, F1_Camera.newInstance(STATE_FACING)).commit();
+
+//                FragmentTransaction ft = getFragmentManager().beginTransaction();
+//                Fragment old = this;
+//                ft.remove(old);
+//                Fragment newInstance = recreateFragment(old);
+//                ft.add(R.id.container, newInstance);
+//                ft.commit();
+
+
+//                getFragmentManager().beginTransaction().detach(this).commit();
+//                getFragmentManager().beginTransaction().attach(this).commit();
+//
+//                mTextureView = (AutoFitTextureView) view.findViewById(R.id.texture);
+//
+//                if (mTextureView.isAvailable()) {
+//                    openCamera(mTextureView.getWidth(), mTextureView.getHeight());
+//                } else {
+//                    mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
+//                }
+
 
                 break;
             }
         }
+    }
+
+    private Fragment recreateFragment(Fragment f)
+    {
+        try {
+            Fragment.SavedState savedState = getFragmentManager().saveFragmentInstanceState(f);
+
+            Fragment newInstance = f.getClass().newInstance();
+            newInstance.setInitialSavedState(savedState);
+
+            return newInstance;
+        }
+        catch (Exception e) // InstantiationException, IllegalAccessException
+        {
+            throw new RuntimeException("Cannot reinstantiate fragment " + f.getClass().getName(), e);
+        }
+    }
+
+    @Override
+    public void onDetach() {
+
+        super.onDetach();
+
     }
 
     /**
