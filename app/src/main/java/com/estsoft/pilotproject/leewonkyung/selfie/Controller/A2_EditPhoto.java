@@ -3,6 +3,7 @@ package com.estsoft.pilotproject.leewonkyung.selfie.Controller;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.app.ProgressDialog;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -32,6 +33,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.estsoft.pilotproject.leewonkyung.selfie.R;
+import com.estsoft.pilotproject.leewonkyung.selfie.Util.BitmapHelper;
 import com.estsoft.pilotproject.leewonkyung.selfie.Util.FileHelper;
 import com.estsoft.pilotproject.leewonkyung.selfie.Util.HTTPRestfulUtilizer;
 import com.estsoft.pilotproject.leewonkyung.selfie.Util.SafeFaceDetector;
@@ -313,7 +315,9 @@ public class A2_EditPhoto extends Activity implements View.OnClickListener {
                 }else {     // if the photo hasn't any faces.
                     //saveBitmapToFile();
                     String url = "http://119.81.176.246:8000";
-                    HTTPRestfulUtilizerExtender a = new HTTPRestfulUtilizerExtender(this, url, "POST", new Bundle(), mFile.getPath());
+
+                    File resizedFile = BitmapHelper.getResizedBitmapFile(this,400,400, mFile.getPath());    // for fast uploading
+                    HTTPRestfulUtilizerExtender a = new HTTPRestfulUtilizerExtender(this, url, "POST", new Bundle(), resizedFile.getPath());
                     a.doExecution();
                 }
 
@@ -456,10 +460,12 @@ public class A2_EditPhoto extends Activity implements View.OnClickListener {
         }
 
         class HttpAsyncTaskExtenders extends HTTPRestfulUtilizer.HttpAsyncTask {
-
+            ProgressDialog dialog;
             @Override
             protected void onPreExecute() {
-                Toast.makeText(getmContext(), "업로드합니다! ", Toast.LENGTH_SHORT).show();
+
+                dialog = ProgressDialog.show(mContext, "Auto Categorization","Please wait...", true);
+                //Toast.makeText(getmContext(), "업로드합니다! ", Toast.LENGTH_SHORT).show();
                 super.onPreExecute();
 
             }
@@ -495,6 +501,10 @@ public class A2_EditPhoto extends Activity implements View.OnClickListener {
 
                 } catch (JSONException e) {
                     e.printStackTrace();
+                }finally{
+                    if(dialog.isShowing())
+                        dialog.dismiss();
+
                 }
             }
         }

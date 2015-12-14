@@ -2,16 +2,22 @@ package com.estsoft.pilotproject.leewonkyung.selfie.View;
 
 
 import android.content.Context;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.graphics.drawable.BitmapDrawable;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.util.SparseArray;
 import android.view.View;
+import android.widget.ImageView;
 
 import com.estsoft.pilotproject.leewonkyung.selfie.R;
+import com.estsoft.pilotproject.leewonkyung.selfie.Util.BitmapHelper;
 import com.google.android.gms.vision.face.Face;
 import com.google.android.gms.vision.face.Landmark;
 
@@ -45,7 +51,8 @@ public class FaceView extends View {
         super.onDraw(canvas);
         if ((mBitmap != null) && (mFaces != null)) {
             double scale = drawBitmap(canvas);
-            drawFaceAnnotations(canvas, scale);
+           // drawFaceAnnotations(canvas, scale);
+            drawFaceDecoration(canvas,scale);
         }
     }
 
@@ -82,11 +89,67 @@ public class FaceView extends View {
 
         for (int i = 0; i < mFaces.size(); ++i) {
             Face face = mFaces.valueAt(i);
+
             for (Landmark landmark : face.getLandmarks()) {
                 int cx = (int) (landmark.getPosition().x * scale);
                 int cy = (int) (landmark.getPosition().y * scale);
                 canvas.drawCircle(cx, cy, 10, paint);
+                Log.d("face landmark type:", landmark.getType() + "(" + cx + "," + cy + ")");
+
             }
         }
     }
+
+    private void drawFaceDecoration(Canvas canvas, double scale) {
+        Paint paint = new Paint();
+        paint.setColor(Color.GREEN);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(5);
+
+        Bitmap glasses = BitmapFactory.decodeResource(getResources(), R.drawable.glasses);
+        Bitmap mutableBitmap_glasses = BitmapHelper.convertToMutable(glasses);
+
+//        Resources res = getResources();
+//        BitmapDrawable bd = (BitmapDrawable)res.getDrawable(R.drawable.glasses);
+//        Bitmap bit = bd.getBitmap();
+
+
+
+
+        for (int i = 0; i < mFaces.size(); ++i) {
+            Face face = mFaces.valueAt(i);
+
+
+            int nose_x=0;
+            int nose_y=0;
+
+            for (Landmark landmark : face.getLandmarks()) {
+
+                int cx = (int) (landmark.getPosition().x * scale);
+                int cy = (int) (landmark.getPosition().y * scale);
+
+                Log.d("face ith landmark", landmark.getType() + "(" + cx + "," + cy+")");
+
+                if(landmark.getType() == Landmark.NOSE_BASE){
+                    nose_x = cx;
+                    nose_y = cy;
+                }
+                // canvas.drawCircle(cx, cy, 10, paint);
+            }
+
+//            mutableBitmap_glasses.setWidth( (int)face.getWidth() );
+//            mutableBitmap_glasses.setHeight( (int) ( face.getWidth() * glasses.getHeight() / glasses.getWidth()) );
+
+
+            Bitmap resizedBitmap_glasses = BitmapHelper.getResizedBitmap(mutableBitmap_glasses,(int) ( face.getWidth()*0.7 * glasses.getHeight() / glasses.getWidth()), (int)(face.getWidth()*0.7));
+            resizedBitmap_glasses =  BitmapHelper.getRotatedBitmap(resizedBitmap_glasses, (int) face.getEulerZ());
+            Log.d("face width and height : ", face.getWidth() + ", " + face.getHeight());
+            Log.d("glasses width and height : ", resizedBitmap_glasses.getWidth() + ", " + resizedBitmap_glasses.getHeight());
+
+
+            canvas.drawBitmap(resizedBitmap_glasses, (int)( nose_x- face.getWidth()*0.7/2 ) , (int)(nose_y-face.getWidth()*0.8/2 ), null);
+
+        }
+    }
+
 }

@@ -4,14 +4,19 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.media.Image;
+import android.os.Environment;
 import android.util.DisplayMetrics;
 import android.util.Log;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
 
 /**
  * Saves a JPEG {@link Image} into the specified {@link File}.
@@ -110,4 +115,8 @@ public class ImageSaver implements Runnable {
         Log.d("filename : ", mFile.getName());
         return mFile.getPath();
     }
+
+
+
+
 }
