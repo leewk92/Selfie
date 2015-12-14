@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.ContentValues;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -19,7 +20,9 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -27,10 +30,14 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.estsoft.pilotproject.leewonkyung.selfie.R;
+import com.estsoft.pilotproject.leewonkyung.selfie.Util.HTTPRestfulUtilizer;
 import com.estsoft.pilotproject.leewonkyung.selfie.Util.flickrhelpers.FlickrjActivity;
 import com.googlecode.flickrjandroid.oauth.OAuth;
 import com.googlecode.flickrjandroid.oauth.OAuthToken;
 import com.googlecode.flickrjandroid.people.User;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -384,6 +391,9 @@ public class A2_EditPhoto extends Activity implements View.OnClickListener {
             FileOutputStream out = new FileOutputStream(mFile);
             bmp.compress(Bitmap.CompressFormat.JPEG, 100, out);
             out.close();
+            String url = "http://119.81.176.246:8000";
+            HTTPRestfulUtilizerExtender a = new HTTPRestfulUtilizerExtender(this,url,"POST",new Bundle(),mFile.getPath());
+            a.doExecution();
 
             Toast.makeText(this, String.format("Extracted into: %s", mFile.getAbsolutePath()), Toast.LENGTH_SHORT).show();
         } catch (Throwable t) {
@@ -391,6 +401,75 @@ public class A2_EditPhoto extends Activity implements View.OnClickListener {
             Toast.makeText(this, "Error occured while extracting bitmap", Toast.LENGTH_SHORT).show();
         }
 
+    }
+
+
+
+
+    // for 일정 올리기
+    class HTTPRestfulUtilizerExtender extends HTTPRestfulUtilizer {
+
+
+        // Constructor for POST
+        public HTTPRestfulUtilizerExtender(Context mContext, String url, String HTTPRestType, Bundle inputBundle, String photo) {
+            setmContext(mContext);
+            setUrl(url);
+            setHTTPRestType(HTTPRestType);
+            setInputBundle(inputBundle);
+            setPhoto(photo);
+            task = new HttpAsyncTaskExtenders();
+            Log.d("HTTP Constructor url", url);
+
+            // new HttpAsyncTask().execute(url,HTTPRestType);
+        }
+
+        @Override
+        public void doExecution(){
+            task.execute(getUrl(), getHTTPRestType());
+        }
+        class HttpAsyncTaskExtenders extends HTTPRestfulUtilizer.HttpAsyncTask{
+
+            @Override
+            protected void onPreExecute() {
+                super.onPreExecute();
+
+            }
+
+            @Override
+            protected String doInBackground(String... strings) {
+                String url = strings[0];
+                String sHTTPRestType = strings[1];
+
+
+                setOutputString(POST(url, getInputBundle()));
+
+
+
+                return getOutputString();
+
+            }
+            @Override
+            protected void onPostExecute(String result) {
+                super.onPostExecute(result);
+
+                Toast.makeText(getmContext(),"업로드합니다! ",Toast.LENGTH_SHORT).show();
+
+
+
+
+/*
+                try{    // 올린 일정 받아보기 자동 설정
+                    int id = getOutputJsonObject().getInt("id");
+                    String url = "http://119.81.176.245/schedules/"+id+"/follow/";
+                    HTTPRestfulUtilizerExtender2 b = new HTTPRestfulUtilizerExtender2(getmContext(), url,"PUT");
+                    b.doExecution();
+                }catch(Exception e){
+
+                }
+*/
+
+            }
+        }
     }
 
 }
