@@ -136,8 +136,8 @@ public class F1_Camera extends Fragment
         @Override
         public void onSurfaceTextureAvailable(SurfaceTexture texture, int width, int height) {
             openCamera(width, height);
-            surfaceWidth = width;
-            surfaceHeight = height;
+//            surfaceWidth = width;
+//            surfaceHeight = height;
         }
 
         @Override
@@ -444,15 +444,19 @@ public class F1_Camera extends Fragment
         // a camera and start preview from here (otherwise, we wait until the surface is ready in
         // the SurfaceTextureListener).
         if (mTextureView.isAvailable()) {
+            Log.d("textureview available?", "true");
             openCamera(mTextureView.getWidth(), mTextureView.getHeight());
         } else {
             mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
+            Log.d("textureview available?", "false");
         }
     }
     @Override
     public void onPause() {
         closeCamera();
         stopBackgroundThread();
+        texture.release();
+        surface.release();
         super.onPause();
     }
 
@@ -501,7 +505,7 @@ public class F1_Camera extends Fragment
                 Log.d("State_Facing", ""+STATE_FACING);
 
 
-                if (facing != null && facing !=STATE_FACING) {
+                if (facing != null && facing ==STATE_FACING) {
                     continue;
                 }
 
@@ -536,7 +540,7 @@ public class F1_Camera extends Fragment
 
 
                 if(facing == CameraCharacteristics.LENS_FACING_BACK)
-                    largest = new Size(1440,1080);
+                    largest = new Size(640,480);
 
                 mImageReader = ImageReader.newInstance(largest.getWidth(), largest.getHeight(), ImageFormat.JPEG, /*maxImages*/2);
                 mImageReader.setOnImageAvailableListener( mOnImageAvailableListener, mBackgroundHandler);
@@ -549,7 +553,7 @@ public class F1_Camera extends Fragment
                 int maxPreviewWidth = displaySize.x;
                 int maxPreviewHeight = displaySize.y;
 
-                boolean swappedDimensions = true;
+                boolean swappedDimensions = false;
 
                 if (swappedDimensions) {
                     rotatedPreviewWidth = height;
@@ -574,10 +578,10 @@ public class F1_Camera extends Fragment
                 // bus' bandwidth limitation, resulting in gorgeous previews but the storage of
                 // garbage capture data.
 
-//                if(facing == CameraCharacteristics.LENS_FACING_BACK) {
-//                    mPreviewSize = largest;
-//                    Log.d("largest back",largest.getWidth() +"," + largest.getHeight() );
-//                }
+                if(facing == CameraCharacteristics.LENS_FACING_BACK) {
+                    mPreviewSize = largest;
+                    Log.d("largest back",largest.getWidth() +"," + largest.getHeight() );
+                }
 //                else {
 //                    mPreviewSize = new Size(1920,1080);
 //                }
@@ -592,8 +596,12 @@ public class F1_Camera extends Fragment
                     mTextureView.setAspectRatio(
                             mPreviewSize.getWidth(), mPreviewSize.getHeight());
                 } else {
+                    if(facing == CameraCharacteristics.LENS_FACING_FRONT)
                     mTextureView.setAspectRatio(
                             mPreviewSize.getHeight(), mPreviewSize.getWidth());
+                    else
+                        mTextureView.setAspectRatio(
+                                3,4);
                 }
                 mCameraId = cameraId;
                 return;
@@ -678,7 +686,7 @@ public class F1_Camera extends Fragment
 //        }else if (sensorOrientation == 180 ) {
 //            matrix.postRotate(0, centerX, centerY);
 //        }
-        mTextureView.setTransform(matrix);
+      //  mTextureView.setTransform(matrix);
     }
 
 
@@ -730,14 +738,14 @@ public class F1_Camera extends Fragment
         }
     }
 
-
-
+    SurfaceTexture texture;
+    Surface surface;
     /**
      * Creates a new {@link CameraCaptureSession} for camera preview.
      */
     private void createCameraPreviewSession() {
         try {
-            SurfaceTexture texture = mTextureView.getSurfaceTexture();
+            texture = mTextureView.getSurfaceTexture();
             assert texture != null;
 
             // We configure the size of default buffer to be the size of camera preview we want.
@@ -747,7 +755,7 @@ public class F1_Camera extends Fragment
 
 
             // This is the output Surface we need to start preview.
-            Surface surface = new Surface(texture);
+            surface = new Surface(texture);
 
             // We set up a CaptureRequest.Builder with the output Surface.
             mPreviewRequestBuilder
@@ -790,6 +798,7 @@ public class F1_Camera extends Fragment
                         public void onConfigureFailed(
                                 @NonNull CameraCaptureSession cameraCaptureSession) {
                             Log.d(TAG, "Configure Failed");
+
                             //getFragmentManager().beginTransaction().replace(R.id.container, F1_Camera.newInstance(STATE_FACING)).commit();
 
                         }
@@ -820,8 +829,17 @@ public class F1_Camera extends Fragment
                     STATE_FACING = CameraCharacteristics.LENS_FACING_BACK;
                 else
                     STATE_FACING = CameraCharacteristics.LENS_FACING_FRONT;
-                getFragmentManager().beginTransaction().replace(R.id.container, F1_Camera.newInstance(STATE_FACING)).commit();
 
+
+                mTextureView.refreshDrawableState();
+                try {
+                    mCaptureSession.stopRepeating();
+                } catch (CameraAccessException e) {
+                    e.printStackTrace();
+                }
+                getFragmentManager().beginTransaction().replace(R.id.container, F1_Camera.newInstance(STATE_FACING)).commit();
+//                getFragmentManager().beginTransaction().detach(this).commit();
+//                getFragmentManager().beginTransaction().attach(this).commit();
 //                FragmentTransaction ft = getFragmentManager().beginTransaction();
 //                Fragment old = this;
 //                ft.remove(old);

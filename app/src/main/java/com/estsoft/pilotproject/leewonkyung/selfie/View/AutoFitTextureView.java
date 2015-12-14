@@ -18,6 +18,7 @@ package com.estsoft.pilotproject.leewonkyung.selfie.View;
 
 import android.content.Context;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.TextureView;
 import android.view.View;
@@ -58,6 +59,9 @@ public class AutoFitTextureView extends TextureView {
         }
         mRatioWidth = width;
         mRatioHeight = height;
+
+
+        Log.d("ratio", mRatioWidth + ":" + mRatioHeight + "");
         requestLayout();
     }
 
@@ -66,6 +70,10 @@ public class AutoFitTextureView extends TextureView {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         int width = MeasureSpec.getSize(widthMeasureSpec);
         int height = MeasureSpec.getSize(heightMeasureSpec);
+
+        Log.d("measured ",width + ","+height);
+
+
         if (0 == mRatioWidth || 0 == mRatioHeight) {
             setMeasuredDimension(width, height);
         } else {
