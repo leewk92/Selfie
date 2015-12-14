@@ -106,8 +106,8 @@ public class F1_Camera extends Fragment
     private static final int STATE_WAITING_PRECAPTURE = 2; // Waiting for the exposure to be precapture state.
     private static final int STATE_WAITING_NON_PRECAPTURE = 3;  //  Waiting for the exposure state to be something other than precapture.
     private static final int STATE_PICTURE_TAKEN = 4;       //taken
-    private static final int MAX_PREVIEW_WIDTH = 1920;
-    private static final int MAX_PREVIEW_HEIGHT = 1080;
+    private static final int MAX_PREVIEW_WIDTH = 19200;
+    private static final int MAX_PREVIEW_HEIGHT = 10800;
     private int STATE_FACING= CameraCharacteristics.LENS_FACING_FRONT;
 
     private SensorManager mSensorManager;
@@ -202,7 +202,7 @@ public class F1_Camera extends Fragment
 
         @Override
         public void onImageAvailable(ImageReader reader) {
-            mImageSaver = new ImageSaver(reader.acquireNextImage(), mFile, mCurrentOrientation);
+            mImageSaver = new ImageSaver(reader.acquireNextImage(), mFile, mCurrentOrientation, STATE_FACING);
             mBackgroundHandler.post(mImageSaver);
             outputBitmap = mImageSaver.getOutputBitmap();
         }
@@ -542,7 +542,8 @@ public class F1_Camera extends Fragment
                 if(facing == CameraCharacteristics.LENS_FACING_BACK)
                     largest = new Size(640,480);
 
-                mImageReader = ImageReader.newInstance(largest.getWidth(), largest.getHeight(), ImageFormat.JPEG, /*maxImages*/2);
+      //          mImageReader = ImageReader.newInstance(largest.getWidth(), largest.getHeight(), ImageFormat.JPEG, /*maxImages*/2);
+                mImageReader = ImageReader.newInstance(1920,1080 , ImageFormat.JPEG, /*maxImages*/2);
                 mImageReader.setOnImageAvailableListener( mOnImageAvailableListener, mBackgroundHandler);
 
                 ///
@@ -799,6 +800,10 @@ public class F1_Camera extends Fragment
                                 @NonNull CameraCaptureSession cameraCaptureSession) {
                             Log.d(TAG, "Configure Failed");
 
+ //                           mImageReader = ImageReader.newInstance(1920,1080 , ImageFormat.JPEG, /*maxImages*/2);
+ //                           mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, mBackgroundHandler);
+                            createCameraPreviewSession();
+
                             //getFragmentManager().beginTransaction().replace(R.id.container, F1_Camera.newInstance(STATE_FACING)).commit();
 
                         }
@@ -832,11 +837,7 @@ public class F1_Camera extends Fragment
 
 
                 mTextureView.refreshDrawableState();
-                try {
-                    mCaptureSession.stopRepeating();
-                } catch (CameraAccessException e) {
-                    e.printStackTrace();
-                }
+
                 getFragmentManager().beginTransaction().replace(R.id.container, F1_Camera.newInstance(STATE_FACING)).commit();
 //                getFragmentManager().beginTransaction().detach(this).commit();
 //                getFragmentManager().beginTransaction().attach(this).commit();
@@ -1047,7 +1048,6 @@ public class F1_Camera extends Fragment
             mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO);
             mPreviewRequestBuilder.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_FACE_PRIORITY);
             mPreviewRequestBuilder.set(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_ZERO_SHUTTER_LAG);
-
 
             mPreviewRequest = mPreviewRequestBuilder.build();
           //  mCaptureSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback, mBackgroundHandler);

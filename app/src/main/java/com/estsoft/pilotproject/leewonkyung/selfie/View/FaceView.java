@@ -106,7 +106,7 @@ public class FaceView extends View {
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeWidth(5);
 
-        Bitmap glasses = BitmapFactory.decodeResource(getResources(), R.drawable.glasses);
+        Bitmap glasses = BitmapFactory.decodeResource(getResources(), R.drawable.shutter);//glasses
         Bitmap mutableBitmap_glasses = BitmapHelper.convertToMutable(glasses);
 
 //        Resources res = getResources();

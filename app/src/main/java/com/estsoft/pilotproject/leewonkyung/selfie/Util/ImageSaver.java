@@ -3,6 +3,7 @@ package com.estsoft.pilotproject.leewonkyung.selfie.Util;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
+import android.hardware.camera2.CameraCharacteristics;
 import android.media.Image;
 import android.os.Environment;
 import android.util.DisplayMetrics;
@@ -33,12 +34,13 @@ public class ImageSaver implements Runnable {
     private final File mFile;
 
     private Bitmap outputBitmap;
-
+    private int mFacing ; //front camera or back camera
     int mCurrentOrientation ;
-    public ImageSaver(Image image, File file, int currentOrientation) {
+    public ImageSaver(Image image, File file, int currentOrientation, int facing) {
         mImage = image;
         mFile = file;
         mCurrentOrientation = currentOrientation;
+        mFacing = facing;
     }
 
     @Override
@@ -49,8 +51,11 @@ public class ImageSaver implements Runnable {
 
         // flip horizontally.
         Bitmap bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-        Bitmap flipped =  flipAndRotate(bmp);
-
+        Bitmap flipped;
+        if(mFacing == CameraCharacteristics.LENS_FACING_FRONT)
+             flipped =  flipAndRotate_front(bmp);
+        else
+            flipped = flipAndRotate_back(bmp);
         outputBitmap = flipped.copy( flipped.getConfig(), true);
 
         FileOutputStream output = null;
@@ -61,8 +66,8 @@ public class ImageSaver implements Runnable {
 
         try {
             output = new FileOutputStream(mFile);
-            output.write(flippedImageByteArray); // fixed : not flipped
-            // output.write(bytes);           // original : flipped
+            output.write(flippedImageByteArray); // fixed : flipped
+
             Log.d("ImageSaver", "writeImage ! ");
         } catch (IOException e) {
             e.printStackTrace();
@@ -78,10 +83,38 @@ public class ImageSaver implements Runnable {
         }
     }
 
-    Bitmap flipAndRotate(Bitmap d)
+    Bitmap flipAndRotate_back(Bitmap d)
     {
         Matrix m = new Matrix();
         m.preScale(-1, 1);
+
+        switch(mCurrentOrientation){
+            case 0:
+                m.postRotate(90);
+                break;
+            case 90:
+                m.postRotate(0);
+                break;
+            case 270:
+                m.postRotate(180);
+                break;
+            case 180:
+                m.postRotate(270);
+
+        }
+
+
+        Bitmap src = d;
+        Bitmap dst = Bitmap.createBitmap(src, 0, 0, src.getWidth(), src.getHeight(), m, false);
+        dst.setDensity(DisplayMetrics.DENSITY_DEFAULT);
+        return  dst;
+    }
+
+    Bitmap flipAndRotate_front(Bitmap d)
+    {
+        Matrix m = new Matrix();
+        //m.preScale(-1, 1);
+
 
         switch(mCurrentOrientation){
             case 0:
