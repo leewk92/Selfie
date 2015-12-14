@@ -48,6 +48,7 @@ import android.hardware.camera2.params.MeteringRectangle;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.ImageReader;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.support.annotation.NonNull;
@@ -68,6 +69,7 @@ import android.widget.ImageButton;
 import android.widget.Toast;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -422,12 +424,13 @@ public class F1_Camera extends Fragment
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        mFile = new File(getActivity().getExternalFilesDir(null) , "pic.jpg");
+
 
     }
 
     @Override
     public void onResume() {
+        mFile = new File(getActivity().getCacheDir()+File.separator + "photoview" + System.currentTimeMillis() + ".jpg");
         super.onResume();
         startBackgroundThread();
 

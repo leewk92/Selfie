@@ -12,11 +12,13 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.graphics.RectF;
+import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.util.SparseArray;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -30,18 +32,28 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.estsoft.pilotproject.leewonkyung.selfie.R;
+import com.estsoft.pilotproject.leewonkyung.selfie.Util.FileHelper;
 import com.estsoft.pilotproject.leewonkyung.selfie.Util.HTTPRestfulUtilizer;
+import com.estsoft.pilotproject.leewonkyung.selfie.Util.SafeFaceDetector;
 import com.estsoft.pilotproject.leewonkyung.selfie.Util.flickrhelpers.FlickrjActivity;
+import com.google.android.gms.vision.Detector;
+import com.google.android.gms.vision.Frame;
+import com.google.android.gms.vision.face.Face;
+import com.google.android.gms.vision.face.FaceDetector;
 import com.googlecode.flickrjandroid.oauth.OAuth;
 import com.googlecode.flickrjandroid.oauth.OAuthToken;
 import com.googlecode.flickrjandroid.people.User;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Random;
 
 import uk.co.senab.photoview.PhotoViewAttacher;
@@ -67,8 +79,8 @@ public class A2_EditPhoto extends Activity implements View.OnClickListener {
     private Matrix mCurrentDisplayMatrix = null;
     private String mFilename;
     private FrameLayout mLayoutShare;
-
-
+    private String mCategory = "";
+    private Bitmap mBitmap;
     private ImageButton edit;
     private ImageButton share;
     private ImageButton camera;
@@ -77,7 +89,6 @@ public class A2_EditPhoto extends Activity implements View.OnClickListener {
 
     private Button sendOut;
     private Button flickr;
-
 
 
     @Override
@@ -91,17 +102,17 @@ public class A2_EditPhoto extends Activity implements View.OnClickListener {
 
 //        Drawable bitmap = getResources().getDrawable(R.drawable.shutter);
 //        mImageView.setImageDrawable(bitmap);
-        Bitmap bmp = null;
+        mBitmap = null;
         mFilename = getIntent().getStringExtra("image_filepath");
         try {
-
+            mFile = new File(mFilename);
             FileInputStream is = new FileInputStream(mFilename);
-            bmp = BitmapFactory.decodeStream(is);
+            mBitmap = BitmapFactory.decodeStream(is);
             is.close();
         } catch (Exception e) {
             e.printStackTrace();
         }
-        mImageView.setImageBitmap(bmp);
+        mImageView.setImageBitmap(mBitmap);
 
         // The MAGIC happens here!
         mAttacher = new PhotoViewAttacher(mImageView);
@@ -110,13 +121,13 @@ public class A2_EditPhoto extends Activity implements View.OnClickListener {
         mAttacher.setOnMatrixChangeListener(new MatrixChangeListener());
         mAttacher.setOnPhotoTapListener(new PhotoTapListener());
 
-        edit = (ImageButton)findViewById(R.id.edit);
-        share = (ImageButton)findViewById(R.id.share);
-        camera = (ImageButton)findViewById(R.id.camera);
-        sticker = (ImageButton)findViewById(R.id.sticker);
-        save = (ImageButton)findViewById(R.id.save);
-        sendOut = (Button)findViewById(R.id.btn_sendout);
-        flickr = (Button)findViewById(R.id.btn_flickr);
+        edit = (ImageButton) findViewById(R.id.edit);
+        share = (ImageButton) findViewById(R.id.share);
+        camera = (ImageButton) findViewById(R.id.camera);
+        sticker = (ImageButton) findViewById(R.id.sticker);
+        save = (ImageButton) findViewById(R.id.save);
+        sendOut = (Button) findViewById(R.id.btn_sendout);
+        flickr = (Button) findViewById(R.id.btn_flickr);
 
 
         edit.setOnClickListener(this);
@@ -150,7 +161,6 @@ public class A2_EditPhoto extends Activity implements View.OnClickListener {
 
         return super.onPrepareOptionsMenu(menu);
     }
-
 
 
     private class PhotoTapListener implements OnPhotoTapListener {
@@ -189,13 +199,13 @@ public class A2_EditPhoto extends Activity implements View.OnClickListener {
     public static final String KEY_USER_NAME = "name";
     public static final String KEY_USER_ID = "id";
 
-    public void showPrefs(){
+    public void showPrefs() {
 
         SharedPreferences settings = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         String oauthTokenString = settings.getString(KEY_OAUTH_TOKEN, null);
         String tokenSecret = settings.getString(KEY_TOKEN_SECRET, null);
         if (oauthTokenString == null && tokenSecret == null) {
-            Log.d("nothing","");
+            Log.d("nothing", "");
         }
         OAuth oauth = new OAuth();
         String userName = settings.getString(KEY_USER_NAME, null);
@@ -230,16 +240,16 @@ public class A2_EditPhoto extends Activity implements View.OnClickListener {
 
                 try {
                     showPrefs();
+//
+//                    Bitmap bmp = mAttacher.getVisibleRectangleBitmap();
+//                    mFile = File.createTempFile("photoview", ".jpeg",
+//                            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM));
+//                    FileOutputStream out = new FileOutputStream(mFile);
+//                    bmp.compress(Bitmap.CompressFormat.JPEG, 100, out);
+//                    out.close();
 
-                    Bitmap bmp = mAttacher.getVisibleRectangleBitmap();
-                    mFile = File.createTempFile("photoview", ".jpeg",
-                            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM));
-                    FileOutputStream out = new FileOutputStream(mFile);
-                    bmp.compress(Bitmap.CompressFormat.JPEG, 100, out);
-                    out.close();
-
-                    Intent intent = new Intent(this , A2_1_EditColor.class);
-                    intent.putExtra("image_filepath", mFile.getAbsolutePath());
+                    Intent intent = new Intent(this, A2_1_EditColor.class);
+                    intent.putExtra("image_filepath", mFilename);
                     startActivity(intent);
 
                     //Toast.makeText(this, String.format("Extracted into: %s", mFile.getAbsolutePath()), Toast.LENGTH_SHORT).show();
@@ -261,6 +271,7 @@ public class A2_EditPhoto extends Activity implements View.OnClickListener {
 
             case R.id.camera: {
 
+                mFile = null;
                 this.finish();
 
                 break;
@@ -268,14 +279,14 @@ public class A2_EditPhoto extends Activity implements View.OnClickListener {
             case R.id.sticker: {
 
                 try {
-                    Bitmap bmp = mAttacher.getVisibleRectangleBitmap();
-                    mFile = File.createTempFile("photoview", ".jpeg",
-                            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM));
-                    FileOutputStream out = new FileOutputStream(mFile);
-                    bmp.compress(Bitmap.CompressFormat.JPEG, 100, out);
-                    out.close();
+//                    Bitmap bmp = mAttacher.getVisibleRectangleBitmap();
+//                    mFile = File.createTempFile("photoview", ".jpeg",
+//                            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM));
+//                    FileOutputStream out = new FileOutputStream(mFile);
+//                    bmp.compress(Bitmap.CompressFormat.JPEG, 100, out);
+//                    out.close();
 
-                    Intent intent = new Intent(this , A2_4_Sticker.class);
+                    Intent intent = new Intent(this, A2_4_Sticker.class);
                     intent.putExtra("image_filepath", mFile.getAbsolutePath());
                     startActivity(intent);
 
@@ -286,23 +297,41 @@ public class A2_EditPhoto extends Activity implements View.OnClickListener {
                 }
 
 
-
-
                 break;
             }
             case R.id.save: {
 
-                saveBitmapToFile();
+                if(hasFace()){
+                    String outputPath = Environment.getExternalStorageDirectory() + File.separator + "Pictures" + File.separator + "Selfie" + File.separator;
+                    FileHelper.moveFile(mFile.getPath(), outputPath );
+                    Toast.makeText(this, "picture is saved to selfie folder!", Toast.LENGTH_SHORT).show();
+                    // make visible on gallery app
+                    ContentValues values = new ContentValues();
+                    values.put(MediaStore.Images.Media.DATA , outputPath + mFile.getName());
+                    values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+                    getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+                }else {     // if the photo hasn't any faces.
+                    //saveBitmapToFile();
+                    String url = "http://119.81.176.246:8000";
+                    HTTPRestfulUtilizerExtender a = new HTTPRestfulUtilizerExtender(this, url, "POST", new Bundle(), mFile.getPath());
+                    a.doExecution();
+                }
+
+
+
+//                Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+//                Uri contentUri = Uri.fromFile(mFile);
+//                mediaScanIntent.setData(contentUri);
+//                this.sendBroadcast(mediaScanIntent);
+
 
                 break;
             }
 
 
+            case R.id.btn_sendout: {
 
-
-            case R.id.btn_sendout : {
-
-                saveBitmapToFile();
+                //saveBitmapToFile();
                 Intent share = new Intent(Intent.ACTION_SEND);
                 share.setType("image/jpeg");
                 share.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(mFile));
@@ -330,9 +359,9 @@ public class A2_EditPhoto extends Activity implements View.OnClickListener {
                 break;
             }
 
-            case R.id.btn_flickr : {
+            case R.id.btn_flickr: {
 
-                saveBitmapToFile();
+                //saveBitmapToFile();
                 Dialog chooseDialog;
 //                Intent intent = new Intent(this , A2_2_Share.class);
 //               // intent.putExtra("image_filepath", mFile.getAbsolutePath());
@@ -353,7 +382,7 @@ public class A2_EditPhoto extends Activity implements View.OnClickListener {
                                         FlickrjActivity.class);
 
 
-                                intent.putExtra("flickImagePath",mFile.getAbsolutePath());
+                                intent.putExtra("flickImagePath", mFile.getAbsolutePath());
                                 intent.putExtra("flickrImageName", "hi");
                                 startActivity(intent);
 
@@ -382,26 +411,24 @@ public class A2_EditPhoto extends Activity implements View.OnClickListener {
     }
 
 
-    void saveBitmapToFile(){
-
-        try {
-            Bitmap bmp = mAttacher.getVisibleRectangleBitmap();
-            mFile = File.createTempFile("photoview", ".jpeg",
-                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM));
-            FileOutputStream out = new FileOutputStream(mFile);
-            bmp.compress(Bitmap.CompressFormat.JPEG, 100, out);
-            out.close();
-            String url = "http://119.81.176.246:8000";
-            HTTPRestfulUtilizerExtender a = new HTTPRestfulUtilizerExtender(this,url,"POST",new Bundle(),mFile.getPath());
-            a.doExecution();
-
-            Toast.makeText(this, String.format("Extracted into: %s", mFile.getAbsolutePath()), Toast.LENGTH_SHORT).show();
-        } catch (Throwable t) {
-            t.printStackTrace();
-            Toast.makeText(this, "Error occured while extracting bitmap", Toast.LENGTH_SHORT).show();
-        }
-
-    }
+//    void saveBitmapToFile() {
+//
+//        try {
+//            Bitmap bmp = mAttacher.getVisibleRectangleBitmap();
+//            mFile = File.createTempFile("photoview", ".jpeg",
+//                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM));
+//            FileOutputStream out = new FileOutputStream(mFile);
+//            bmp.compress(Bitmap.CompressFormat.JPEG, 100, out);
+//            out.close();
+//
+//
+//            Toast.makeText(this, String.format("Extracted into: %s", mFile.getAbsolutePath()), Toast.LENGTH_SHORT).show();
+//        } catch (Throwable t) {
+//            t.printStackTrace();
+//            Toast.makeText(this, "Error occured while extracting bitmap", Toast.LENGTH_SHORT).show();
+//        }
+//
+//    }
 
 
 
@@ -424,13 +451,15 @@ public class A2_EditPhoto extends Activity implements View.OnClickListener {
         }
 
         @Override
-        public void doExecution(){
+        public void doExecution() {
             task.execute(getUrl(), getHTTPRestType());
         }
-        class HttpAsyncTaskExtenders extends HTTPRestfulUtilizer.HttpAsyncTask{
+
+        class HttpAsyncTaskExtenders extends HTTPRestfulUtilizer.HttpAsyncTask {
 
             @Override
             protected void onPreExecute() {
+                Toast.makeText(getmContext(), "업로드합니다! ", Toast.LENGTH_SHORT).show();
                 super.onPreExecute();
 
             }
@@ -443,33 +472,55 @@ public class A2_EditPhoto extends Activity implements View.OnClickListener {
 
                 setOutputString(POST(url, getInputBundle()));
 
-
-
                 return getOutputString();
 
             }
+
             @Override
             protected void onPostExecute(String result) {
                 super.onPostExecute(result);
 
-                Toast.makeText(getmContext(),"업로드합니다! ",Toast.LENGTH_SHORT).show();
+                JSONObject outputJsonObject = getOutputJsonObject();
+                try {
+                    mCategory = outputJsonObject.getString("category");
+                    Log.d("category :", mCategory);
+                    String outputPath = Environment.getExternalStorageDirectory()+ File.separator + "Pictures" + File.separator + mCategory + File.separator;
+                    FileHelper.moveFile(mFile.getPath(), outputPath );
+                    Toast.makeText(getmContext(), "picture is moved to category : " + mCategory + "!", Toast.LENGTH_SHORT).show();
 
+                    ContentValues values = new ContentValues();
+                    values.put(MediaStore.Images.Media.DATA , outputPath + mFile.getName());
+                    values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+                    getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
 
-
-
-/*
-                try{    // 올린 일정 받아보기 자동 설정
-                    int id = getOutputJsonObject().getInt("id");
-                    String url = "http://119.81.176.245/schedules/"+id+"/follow/";
-                    HTTPRestfulUtilizerExtender2 b = new HTTPRestfulUtilizerExtender2(getmContext(), url,"PUT");
-                    b.doExecution();
-                }catch(Exception e){
-
+                } catch (JSONException e) {
+                    e.printStackTrace();
                 }
-*/
-
             }
         }
     }
+
+
+    boolean hasFace(){
+
+        boolean result = true;
+
+        FaceDetector detector = new FaceDetector.Builder(getApplicationContext())
+                .setTrackingEnabled(false)
+                .setLandmarkType(FaceDetector.ALL_LANDMARKS)
+                .build();
+
+        Detector<Face> safeDetector = new SafeFaceDetector(detector);
+
+        // Create a frame from the bitmap and run face detection on the frame.
+        Frame frame = new Frame.Builder().setBitmap(mBitmap).build();
+        SparseArray<Face> faces = safeDetector.detect(frame);
+
+        if(faces.size() == 0)
+            result = false;
+        return result;
+    }
+
+
 
 }

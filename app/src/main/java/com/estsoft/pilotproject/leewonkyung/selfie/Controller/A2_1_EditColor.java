@@ -1,6 +1,7 @@
 package com.estsoft.pilotproject.leewonkyung.selfie.Controller;
 
 import android.app.Activity;
+import android.content.ContentValues;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -13,6 +14,7 @@ import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -95,7 +97,8 @@ public class A2_1_EditColor extends Activity {
 
         mInputFilePath = getIntent().getStringExtra("image_filepath");
         try {
-
+            mFile = new File(mInputFilePath);
+            Log.d("inputFilePath",mInputFilePath);
             FileInputStream is = new FileInputStream(mInputFilePath);
             bmp = BitmapFactory.decodeStream(is);
             is.close();
@@ -140,11 +143,11 @@ public class A2_1_EditColor extends Activity {
             switch(v.getId()){
 
                 case R.id.btn_back:
-                    try{
-                        new File(mOutputFilePath).delete();
-                    }catch(Exception e){
-
-                    }
+//                    try{
+//                        new File(mOutputFilePath).delete();
+//                    }catch(Exception e){
+//
+//                    }
                     finish();
 
                     break;
@@ -279,22 +282,28 @@ public class A2_1_EditColor extends Activity {
         Uri outputFileUri = null;
         Bitmap tmpBitmap = loadBitmapFromView(mImageView);
         try {
-            File root = new File(Environment.getExternalStorageDirectory()
-                    + File.separator + "Selfie" + File.separator);
+            File root = new File( Environment.getExternalStorageDirectory() + File.separator + "Pictures" + File.separator+ "Decorated"+ File.separator);
             root.mkdirs();
-            File sdImageMainDirectory = new File(root, "tmp.png");
+            File sdImageMainDirectory = File.createTempFile("photoview",".jpg", root );
             outputFileUri = Uri.fromFile(sdImageMainDirectory);
 
             mOutputFilePath = sdImageMainDirectory.getPath();
             fOut = new FileOutputStream(sdImageMainDirectory);
+
+            // make visible on gallery app
+            ContentValues values = new ContentValues();
+            values.put(MediaStore.Images.Media.DATA , mOutputFilePath);
+            values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+            getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+
+
         } catch (Exception e) {
-            Toast.makeText(this, "Error occured. Please try again later.",
+            Toast.makeText(this, "GetUri error occured. Please try again later.",
                     Toast.LENGTH_SHORT).show();
         }
 
         try {
-            tmpBitmap.compress(Bitmap.CompressFormat.PNG, 100, fOut);
-
+            tmpBitmap.compress(Bitmap.CompressFormat.JPEG, 100, fOut);
 
             fOut.flush();
             fOut.close();
