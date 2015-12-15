@@ -121,7 +121,7 @@ public class F1_Camera extends Fragment
     private int surfaceHeight=0;
     private String mEffectArray[]; // save names of effects
     ImageButton btn_takePicture;
-    ImageButton btn_info;
+    ImageButton btn_switch;
     Animation anim_rotateLeft;
     Animation anim_rotateRight;
 
@@ -284,9 +284,9 @@ public class F1_Camera extends Fragment
 
         mActivity = this.getActivity();
         btn_takePicture = (ImageButton)view.findViewById(R.id.picture);
-        btn_info = (ImageButton) view.findViewById(R.id.info);
+        btn_switch = (ImageButton) view.findViewById(R.id.switchCamera);
         btn_takePicture.setOnClickListener(this);
-        btn_info.setOnClickListener(this);
+        btn_switch.setOnClickListener(this);
         mTextureView = (AutoFitTextureView) view.findViewById(R.id.texture);
 
 
@@ -541,6 +541,7 @@ public class F1_Camera extends Fragment
 
                 if(facing == CameraCharacteristics.LENS_FACING_BACK)
                     largest = new Size(640,480);
+          //          largest = new Size(4128,2322);
 
       //          mImageReader = ImageReader.newInstance(largest.getWidth(), largest.getHeight(), ImageFormat.JPEG, /*maxImages*/2);
                 mImageReader = ImageReader.newInstance(1920,1080 , ImageFormat.JPEG, /*maxImages*/2);
@@ -821,7 +822,7 @@ public class F1_Camera extends Fragment
                  takePicture();
                 break;
             }
-            case R.id.info: {
+            case R.id.switchCamera: {
                 Activity activity = getActivity();
 //                if (null != activity) {
 //                    new AlertDialog.Builder(activity)

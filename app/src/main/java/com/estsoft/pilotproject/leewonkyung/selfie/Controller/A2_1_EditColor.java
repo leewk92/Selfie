@@ -27,6 +27,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.estsoft.pilotproject.leewonkyung.selfie.R;
+import com.estsoft.pilotproject.leewonkyung.selfie.Util.BitmapHelper;
 import com.estsoft.pilotproject.leewonkyung.selfie.Util.ColorFilterGenerator;
 import com.soundcloud.android.crop.Crop;
 
@@ -168,6 +169,8 @@ public class A2_1_EditColor extends Activity {
                 case R.id.btn_rotate :
                     layout_color.setVisibility(View.INVISIBLE);
 
+                    bmp =  BitmapHelper.getRotatedBitmap(bmp,90);
+                    mImageView.setImageBitmap(bmp);
                     break;
                 case R.id.btn_save:
 
