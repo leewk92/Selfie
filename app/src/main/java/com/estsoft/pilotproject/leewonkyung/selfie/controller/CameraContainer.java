@@ -14,30 +14,29 @@
  * limitations under the License.
  */
 
-package com.estsoft.pilotproject.leewonkyung.selfie.Controller;
+package com.estsoft.pilotproject.leewonkyung.selfie.controller;
 
 import android.app.Activity;
 import android.hardware.camera2.CameraCharacteristics;
 import android.os.Bundle;
-import android.view.animation.Animation;
 
 import com.estsoft.pilotproject.leewonkyung.selfie.R;
 
-public class A1_CameraContainer extends Activity {
-    Animation anim_rotateLeft;
-    Animation anim_rotateRight;
+/**
+ * This activity contains Camera fragment.
+ */
+public class CameraContainer extends Activity {
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.a1_cameracontainer);
-        if (null == savedInstanceState) {
-            getFragmentManager().beginTransaction()
-                    .replace(R.id.container, F1_Camera.newInstance(CameraCharacteristics.LENS_FACING_FRONT))
-                    .commit();
-        }
-
-
+  @Override
+  protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    setContentView(R.layout.camera_container);
+    if (null == savedInstanceState) {
+      getFragmentManager().beginTransaction()
+          .replace(R.id.container, Camera.newInstance(CameraCharacteristics.LENS_FACING_FRONT))     //using front camera is default setting.
+          .commit();
     }
+
+  }
 
 }
