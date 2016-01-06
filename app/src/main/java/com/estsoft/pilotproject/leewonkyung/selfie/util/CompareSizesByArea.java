@@ -10,15 +10,15 @@ import java.util.Comparator;
 
 public class CompareSizesByArea implements Comparator<Size> {
 
-    public CompareSizesByArea() {
-        super();
-    }
+  public CompareSizesByArea() {
+    super();
+  }
 
-    @Override
-    public int compare(Size lhs, Size rhs) {
-        // We cast here to ensure the multiplications won't overflow
-        return Long.signum((long) lhs.getWidth() * lhs.getHeight() -
-                (long) rhs.getWidth() * rhs.getHeight());
-    }
+  @Override
+  public int compare(Size lhs, Size rhs) {
+    // We cast here to ensure the multiplications won't overflow
+    return Long.signum((long) lhs.getWidth() * lhs.getHeight() -
+        (long) rhs.getWidth() * rhs.getHeight());
+  }
 
 }

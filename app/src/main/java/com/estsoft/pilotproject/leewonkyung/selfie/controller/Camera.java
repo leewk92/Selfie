@@ -560,6 +560,7 @@ public class Camera extends Fragment implements SensorEventListener {
     }catch (InterruptedException e){
       throw new RuntimeException("Interrupted while trying to lock camera closing.", e);
     }
+
   }
 
   /**
@@ -605,7 +606,9 @@ public class Camera extends Fragment implements SensorEventListener {
 
       @Override
       public void onConfigureFailed(CameraCaptureSession cameraCaptureSession) {
+
         createCameraPreviewSession();
+
       }
 
       private boolean isCameraAlreadyClosed(){
@@ -806,18 +809,17 @@ public class Camera extends Fragment implements SensorEventListener {
     if (event.values.length > 4) {
       float[] truncatedRotationVector = new float[4];
       System.arraycopy(event.values, 0, truncatedRotationVector, 0, 4);
-      updateOrientation(truncatedRotationVector);
+      updateOrientationAndRotateButton(truncatedRotationVector);
     } else {
-      updateOrientation(event.values);
+      updateOrientationAndRotateButton(event.values);
     }
-    rotateButton();
   }
 
   @Override
   public void onAccuracyChanged(Sensor sensor, int accuracy) {
   }
 
-  private void updateOrientation(float[] vectors) {
+  private void updateOrientationAndRotateButton(float[] vectors) {
     float[] rotationMatrix = new float[9];
     SensorManager.getRotationMatrixFromVector(rotationMatrix, vectors);
     int worldAxisX = SensorManager.AXIS_X;
@@ -839,6 +841,7 @@ public class Camera extends Fragment implements SensorEventListener {
     } else {
       mCurrentOrientation = 180;
     }
+    rotateButton();
   }
 
   private void rotateButton(){

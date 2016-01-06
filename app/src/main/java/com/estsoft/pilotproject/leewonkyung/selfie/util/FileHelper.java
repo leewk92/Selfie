@@ -1,118 +1,110 @@
 package com.estsoft.pilotproject.leewonkyung.selfie.util;
 
+import android.system.ErrnoException;
 import android.util.Log;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
 /**
+ * Utility for dealing with file
  * Created by LeeWonKyung on 2015-12-14.
  */
 public class FileHelper {
 
-    public static void deleteFile(String inputPath, String inputFile) {
-        try {
-            // delete the original file
-            new File(inputPath + inputFile).delete();
+  static final String TAG = "FileHelper";
+  /**
+   * like linux command rm
+   * @param inputPath
+   * @param inputFile
+   */
+  public static void deleteFile(String inputPath, String inputFile) {
+    try {
+      // delete the original file
+      new File(inputPath + inputFile).delete();
 
-
-        } catch (Exception e) {
-            Log.e("tag", e.getMessage());
-        }
+    } catch (Exception e) {
+      e.printStackTrace();
     }
+  }
 
+  /**
+   * like linux command mv
+   * @param inputPath
+   * @param outputPath
+   */
+  public static void moveFile(String inputPath, String outputPath) {
 
-    public static void moveFile(String inputPath, String outputPath) {
+    InputStream inputStream = null;
+    OutputStream outputStream = null;
+    final String inputFile = inputPath.substring(inputPath.lastIndexOf(File.separator) + 1, inputPath.length());
+    try {
+      //create output directory if it doesn't exist
+      File dir = new File(outputPath);
+      if (!dir.exists()) {
+        dir.mkdirs();
+      }
 
-        InputStream in = null;
-        OutputStream out = null;
-        Log.d("inputPath", inputPath);
-        String inputFile = inputPath.substring(inputPath.lastIndexOf(File.separator)+1, inputPath.length());
-        Log.d("inputFile", inputFile);
-        try {
+      inputStream = new FileInputStream(inputPath);
+      outputStream = new FileOutputStream(outputPath + inputFile);
 
-            //create output directory if it doesn't exist
-            File dir = new File (outputPath);
-            Log.d("outputPath", outputPath);
-            if (!dir.exists())
-            {
-                dir.mkdirs();
-            }
+      byte[] buffer = new byte[1024];
+      int read;
+      while ((read = inputStream.read(buffer)) != -1) {
+        outputStream.write(buffer, 0, read);
+      }
+      inputStream.close();
+      // write the output file
+      outputStream.flush();
+      outputStream.close();
+      // delete the original file
+      new File(inputPath).delete();
 
-
-            in = new FileInputStream(inputPath);
-            out = new FileOutputStream(outputPath + inputFile);
-
-            byte[] buffer = new byte[1024];
-            int read;
-            while ((read = in.read(buffer)) != -1) {
-                out.write(buffer, 0, read);
-            }
-            in.close();
-            in = null;
-
-            // write the output file
-            out.flush();
-            out.close();
-            out = null;
-
-            // delete the original file
-            new File(inputPath).delete();
-
-
-        }
-
-        catch (FileNotFoundException fnfe1) {
-            Log.e("tag", fnfe1.getMessage());
-        }
-        catch (Exception e) {
-            Log.e("tag", e.getMessage());
-        }
-
+    } catch (FileNotFoundException e) {
+      e.printStackTrace();
+    } catch (IOException e) {
+      e.printStackTrace();
     }
+  }
 
-    public static void copyFile(String inputPath, String inputFile, String outputPath) {
+  /**
+   * like linux commmand cp
+   * @param inputPath
+   * @param inputFile
+   * @param outputPath
+   */
+  public static void copyFile(String inputPath, String inputFile, String outputPath) {
 
-        InputStream in = null;
-        OutputStream out = null;
-        try {
+    InputStream inputStream = null;
+    OutputStream outputStream = null;
+    try {
 
-            //create output directory if it doesn't exist
-            File dir = new File (outputPath);
-            if (!dir.exists())
-            {
-                dir.mkdirs();
-            }
+      //create output directory if it doesn't exist
+      File dir = new File(outputPath);
+      if (!dir.exists()) {
+        dir.mkdirs();
+      }
+      inputStream = new FileInputStream(inputPath + inputFile);
+      outputStream = new FileOutputStream(outputPath + inputFile);
+      byte[] buffer = new byte[1024];
+      int read;
+      while ((read = inputStream.read(buffer)) != -1) {
+        outputStream.write(buffer, 0, read);
+      }
+      inputStream.close();
+      // write the output file (You have now copied the file)
+      outputStream.flush();
+      outputStream.close();
 
-
-            in = new FileInputStream(inputPath + inputFile);
-            out = new FileOutputStream(outputPath + inputFile);
-
-            byte[] buffer = new byte[1024];
-            int read;
-            while ((read = in.read(buffer)) != -1) {
-                out.write(buffer, 0, read);
-            }
-            in.close();
-            in = null;
-
-            // write the output file (You have now copied the file)
-            out.flush();
-            out.close();
-            out = null;
-
-        }  catch (FileNotFoundException fnfe1) {
-            Log.e("tag", fnfe1.getMessage());
-        }
-        catch (Exception e) {
-            Log.e("tag", e.getMessage());
-        }
-
+    } catch (FileNotFoundException e) {
+      e.printStackTrace();
+    } catch (IOException e) {
+      e.printStackTrace();
     }
-
-
+  }
 }

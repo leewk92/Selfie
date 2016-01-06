@@ -1,155 +1,179 @@
 package com.estsoft.pilotproject.leewonkyung.selfie.util;
 
+import android.content.ContentValues;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.hardware.camera2.CameraCharacteristics;
 import android.media.Image;
-import android.os.Environment;
+import android.provider.MediaStore;
 import android.util.DisplayMetrics;
 import android.util.Log;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
-import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
 
 /**
  * Saves a JPEG {@link Image} into the specified {@link File}.
+ * TODO: Recycling Bitmap File is not working!!
  */
 public class ImageSaver implements Runnable {
 
-    /**
-     * The JPEG image
-     */
-    private final Image mImage;
-    /**
-     * The file we save the image into.
-     */
-    private final File mFile;
+  static private int ORIENTATION_BASED_ROTATION_DEGREE_0 = 90;
+  static private int ORIENTATION_BASED_ROTATION_DEGREE_90 = 0;
+  static private int ORIENTATION_BASED_ROTATION_DEGREE_180 = 270;
+  static private int ORIENTATION_BASED_ROTATION_DEGREE_270 = 180;
 
-    private Bitmap outputBitmap;
-    private int mFacing ; //front camera or back camera
-    int mCurrentOrientation ;
-    public ImageSaver(Image image, File file, int currentOrientation, int facing) {
-        mImage = image;
-        mFile = file;
-        mCurrentOrientation = currentOrientation;
-        mFacing = facing;
+  private final Image mImage; //jpeg image
+  private final File mFile; // The file we save the image into.
+
+  private Bitmap mOutputBitmap;
+  private int mFacing; //front camera or back camera
+  int mCurrentOrientation;
+
+  // Constructor
+  public ImageSaver(Image image, File file, int currentOrientation, int facing) {
+    mImage = image;
+    mFile = file;
+    mCurrentOrientation = currentOrientation;
+    mFacing = facing;
+  }
+
+  // TODO: bitmap recycle managemnet is required.
+  @Override
+  public void run() {
+    ByteBuffer buffer = mImage.getPlanes()[0].getBuffer();
+    byte[] bytes = new byte[buffer.remaining()];
+    buffer.get(bytes);
+
+    // flip horizontally.
+    Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+    Bitmap flipped;
+    if (mFacing == CameraCharacteristics.LENS_FACING_FRONT) {
+      flipped = flipAndRotate_front(bitmap);
+    }
+    else {
+      flipped = flipAndRotate_back(bitmap);
+    }
+    if(!bitmap.isRecycled()) {
+      bitmap.recycle();
     }
 
-    @Override
-    public void run() {
-        ByteBuffer buffer = mImage.getPlanes()[0].getBuffer();
-        byte[] bytes = new byte[buffer.remaining()];
-        buffer.get(bytes);
+    mOutputBitmap = flipped.copy(flipped.getConfig(), true);
 
-        // flip horizontally.
-        Bitmap bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-        Bitmap flipped;
-        if(mFacing == CameraCharacteristics.LENS_FACING_FRONT)
-             flipped =  flipAndRotate_front(bmp);
-        else
-            flipped = flipAndRotate_back(bmp);
-        outputBitmap = flipped.copy( flipped.getConfig(), true);
+    FileOutputStream output = null;
 
-        FileOutputStream output = null;
+    ByteArrayOutputStream stream = new ByteArrayOutputStream();
+    flipped.compress(Bitmap.CompressFormat.JPEG, 100, stream);        //quality : 0 to 100
+    byte[] flippedImageByteArray = stream.toByteArray();
 
-        ByteArrayOutputStream stream = new ByteArrayOutputStream();
-        flipped.compress(Bitmap.CompressFormat.JPEG, 100, stream);        //quality : 0 to 100
-        byte[] flippedImageByteArray = stream.toByteArray();
+    if(flipped.isRecycled()) {
+      flipped.recycle();
+    }
 
+    try {
+      output = new FileOutputStream(mFile);
+      output.write(flippedImageByteArray); // fixed : flipped
+
+    } catch (IOException e) {
+      e.printStackTrace();
+
+    } finally {
+      mImage.close();
+      if (null != output) {
         try {
-            output = new FileOutputStream(mFile);
-            output.write(flippedImageByteArray); // fixed : flipped
-
-            Log.d("ImageSaver", "writeImage ! ");
+          output.close();
         } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            mImage.close();
-            if (null != output) {
-                try {
-                    output.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+          e.printStackTrace();
         }
+      }
+    }
+  }
+
+  // TODO: How to recycle bitmaps ?
+
+  /**
+   * For back facing camera, we need to horizontal filp rotate image for saving in right orientation.
+   * @param inputBitmap
+   * @return
+   */
+  Bitmap flipAndRotate_back(Bitmap inputBitmap) {
+    Matrix m = new Matrix();
+    m.preScale(-1, 1);
+    // Degrees are just camera hardware characteristic
+    switch (mCurrentOrientation) {
+      case 0:
+        m.postRotate(ORIENTATION_BASED_ROTATION_DEGREE_0);
+        break;
+      case 90:
+        m.postRotate(ORIENTATION_BASED_ROTATION_DEGREE_90);
+        break;
+      case 180:
+        m.postRotate(ORIENTATION_BASED_ROTATION_DEGREE_180);
+        break;
+      case 270:
+        m.postRotate(ORIENTATION_BASED_ROTATION_DEGREE_270);
+        break;
+    }
+    Bitmap srcBitmap = inputBitmap;
+    Bitmap dstBitmap = Bitmap.createBitmap(srcBitmap, 0, 0, srcBitmap.getWidth(), srcBitmap.getHeight(), m, false);
+    dstBitmap.setDensity(DisplayMetrics.DENSITY_DEFAULT);
+
+    if(!inputBitmap.isRecycled()) {
+      inputBitmap.recycle();
+    }
+    if(!srcBitmap.isRecycled()) {
+      srcBitmap.recycle();
     }
 
-    Bitmap flipAndRotate_back(Bitmap d)
-    {
-        Matrix m = new Matrix();
-        m.preScale(-1, 1);
+    return dstBitmap;
+  }
 
-        switch(mCurrentOrientation){
-            case 0:
-                m.postRotate(90);
-                break;
-            case 90:
-                m.postRotate(0);
-                break;
-            case 270:
-                m.postRotate(180);
-                break;
-            case 180:
-                m.postRotate(270);
-
-        }
-
-
-        Bitmap src = d;
-        Bitmap dst = Bitmap.createBitmap(src, 0, 0, src.getWidth(), src.getHeight(), m, false);
-        dst.setDensity(DisplayMetrics.DENSITY_DEFAULT);
-        return  dst;
+  /**
+   * For front facing camera, we need to just rotate image for saving in right orientation.
+   * @param inputBitmap
+   * @return
+   */
+  Bitmap flipAndRotate_front(Bitmap inputBitmap) {
+    Matrix m = new Matrix();
+    // Degrees are just camera hardware characteristic
+    switch (mCurrentOrientation) {
+      case 0:
+        m.postRotate(ORIENTATION_BASED_ROTATION_DEGREE_0);
+        break;
+      case 90:
+        m.postRotate(ORIENTATION_BASED_ROTATION_DEGREE_90);
+        break;
+      case 180:
+        m.postRotate(ORIENTATION_BASED_ROTATION_DEGREE_180);
+        break;
+      case 270:
+        m.postRotate(ORIENTATION_BASED_ROTATION_DEGREE_270);
+        break;
     }
+    Bitmap srcBitmap = inputBitmap;
+    Bitmap dstBitmap = Bitmap.createBitmap(srcBitmap, 0, 0, srcBitmap.getWidth(), srcBitmap.getHeight(), m, false);
+    dstBitmap.setDensity(DisplayMetrics.DENSITY_DEFAULT);
 
-    Bitmap flipAndRotate_front(Bitmap d)
-    {
-        Matrix m = new Matrix();
-        //m.preScale(-1, 1);
-
-
-        switch(mCurrentOrientation){
-            case 0:
-                m.postRotate(90);
-                break;
-            case 90:
-                m.postRotate(0);
-                break;
-            case 270:
-                m.postRotate(180);
-                break;
-            case 180:
-                m.postRotate(270);
-
-        }
-
-
-        Bitmap src = d;
-        Bitmap dst = Bitmap.createBitmap(src, 0, 0, src.getWidth(), src.getHeight(), m, false);
-        dst.setDensity(DisplayMetrics.DENSITY_DEFAULT);
-        return  dst;
+    if(!inputBitmap.isRecycled()) {
+      inputBitmap.recycle();
     }
-
-    public Bitmap getOutputBitmap() {
-        return outputBitmap;
+    if(!srcBitmap.isRecycled()) {
+      srcBitmap.recycle();
     }
-    public String getOutputFilepath(){
+    return dstBitmap;
+  }
 
-        Log.d("fileAbsolutePath : ", mFile.getAbsolutePath());
-        Log.d("filepath : ", mFile.getPath());
-        Log.d("filename : ", mFile.getName());
-        return mFile.getPath();
-    }
+  public Bitmap getOutputBitmap() {
+    return mOutputBitmap;
+  }
 
-
+  public String getOutputFilepath() {
+    return mFile.getPath();
+  }
 
 
 }
