@@ -494,7 +494,7 @@ public class Camera extends Fragment implements SensorEventListener {
       mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class),
           width, height, maxPreviewWidth, maxPreviewHeight, largest);
 
-      Log.i("largest front", mPreviewSize.getWidth() + "," + mPreviewSize.getWidth());
+      Log.i("largest front", mPreviewSize.getWidth() + "," + mPreviewSize.getHeight());
 
       // Danger, W.R.! Attempting to use too large a preview size could  exceed the camera
       // bus' bandwidth limitation, resulting in gorgeous previews but the storage of
