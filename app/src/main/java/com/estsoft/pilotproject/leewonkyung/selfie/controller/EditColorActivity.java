@@ -189,9 +189,7 @@ public class EditColorActivity extends Activity {
 
   @Override
   protected void onActivityResult(int requestCode, int resultCode, Intent result) {
-    if (requestCode == Crop.REQUEST_PICK && resultCode == RESULT_OK) {
-
-    } else if (requestCode == Crop.REQUEST_CROP) {
+    if (requestCode == Crop.REQUEST_CROP) {
       handleCrop(resultCode, result);
     }
   }
