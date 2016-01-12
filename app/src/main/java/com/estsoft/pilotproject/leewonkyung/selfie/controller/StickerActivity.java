@@ -41,7 +41,7 @@ public class StickerActivity extends Activity {
     setContentView(R.layout.sticker_activity);
 
     String filename = getIntent().getStringExtra("image_filepath");
-    try {
+    try {   // asyncTask로 바꿔야함
       FileInputStream is = new FileInputStream(filename);
       mBitmap = BitmapFactory.decodeStream(is);
       is.close();

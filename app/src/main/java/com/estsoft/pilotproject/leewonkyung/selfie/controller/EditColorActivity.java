@@ -60,7 +60,7 @@ public class EditColorActivity extends Activity {
     mLayoutColor = (FrameLayout) findViewById(R.id.layout_color);
 
     mInputFilePath = getIntent().getStringExtra("image_filepath");
-    try {
+    try { // asyncTask로 바꿔야함
       mFile = new File(mInputFilePath);
       Log.d("inputFilePath", mInputFilePath);
       FileInputStream is = new FileInputStream(mInputFilePath);

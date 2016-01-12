@@ -70,7 +70,7 @@ public class HomeActivity extends Activity  {
     final Button btnFlickr = (Button) findViewById(R.id.btn_flickr);
 
     mFilename = getIntent().getStringExtra("image_filepath");
-    try {
+    try {   // async task 로 바꿔야함
       mFile = new File(mFilename);
       FileInputStream is = new FileInputStream(mFilename);
       mBitmap = BitmapFactory.decodeStream(is);

@@ -18,8 +18,12 @@ package com.estsoft.pilotproject.leewonkyung.selfie.controller;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.app.DialogFragment;
 import android.app.Fragment;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.ImageFormat;
@@ -39,10 +43,12 @@ import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.ImageReader;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.support.annotation.NonNull;
+import android.support.v13.app.FragmentCompat;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 import android.util.Size;
@@ -462,7 +468,7 @@ public class Camera extends Fragment implements SensorEventListener {
       // For still image captures, we use the largest available size.
       final Size largest = Collections.max(Arrays.asList(map.getOutputSizes(ImageFormat.JPEG)), new CompareSizesByArea());
 
-      // Check available camera resolutions
+      // just for logging
       for (int i = 0; i < map.getOutputSizes(ImageFormat.JPEG).length; i++) {
         Size tmpSize = map.getOutputSizes(ImageFormat.JPEG)[i];
         Log.i("sizes", "(" + tmpSize.getWidth() + "," +
@@ -494,7 +500,7 @@ public class Camera extends Fragment implements SensorEventListener {
       // bus' bandwidth limitation, resulting in gorgeous previews but the storage of
       // garbage capture data.
 
-      mTextureView.setAspectRatio(mPreviewSize.getHeight(), mPreviewSize.getWidth());
+      mTextureView.setAspectRatio(mPreviewSize.getWidth(), mPreviewSize.getHeight());
       mCameraId = cameraId;
       return;
     }
@@ -509,6 +515,13 @@ public class Camera extends Fragment implements SensorEventListener {
   private void openCamera(int width, int height) throws CameraAccessException {
     setUpCameraOutputs(width, height);
     CameraManager manager = (CameraManager) mActivity.getSystemService(Context.CAMERA_SERVICE);
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {   // current sdk min : 21, target build version : 23
+      if (getActivity().checkSelfPermission(Manifest.permission.CAMERA)!= PackageManager.PERMISSION_GRANTED) {
+        requestCameraPermission();
+        return;
+      }
+    }
     /**
      * Exception comment
      * if fail to open camera because of permission, throw CameraAccessException.
@@ -519,11 +532,20 @@ public class Camera extends Fragment implements SensorEventListener {
     } catch (InterruptedException e) {
       throw new RuntimeException("Interrupted while trying to lock camera opening.", e);
     }
-    if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-      // Following method needs to check permissions above.
-    }
     manager.openCamera(mCameraId, mStateCallback, mBackgroundHandler);
+
+
   }
+
+  private void requestCameraPermission() {
+    if (FragmentCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA)) {
+      new ConfirmationDialog().show(getChildFragmentManager(), FRAGMENT_DIALOG);
+    } else {
+      FragmentCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA},
+          REQUEST_CAMERA_PERMISSION);
+    }
+  }
+
 
   /**
    * Closes the current {@link CameraDevice}.
@@ -647,8 +669,8 @@ public class Camera extends Fragment implements SensorEventListener {
       return;
     }
 
-    addTargetToStillCaptureRequestBuilderForPreview();
-    setupStillCaptureRequestBuilderForPreview();
+    addTargetToStillCaptureRequestBuilderForTakePicture();
+    setupStillCaptureRequestBuilderForTakePicture();
     Log.i(TAG, "mCurrentOrientation : " + mCurrentOrientation);
 
     CameraCaptureSession.CaptureCallback cameraCaptureSessionCaptureCallback
@@ -684,14 +706,14 @@ public class Camera extends Fragment implements SensorEventListener {
 
   }
 
-  private void addTargetToStillCaptureRequestBuilderForPreview() throws CameraAccessException {
+  private void addTargetToStillCaptureRequestBuilderForTakePicture() throws CameraAccessException {
     mStillCaptureRequestBuilder =
         mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
     mStillCaptureRequestBuilder.addTarget(mImageReader.getSurface());
 
   }
 
-  private void setupStillCaptureRequestBuilderForPreview(){
+  private void setupStillCaptureRequestBuilderForTakePicture(){
     // Use the same AE and AF modes as the preview.
     mStillCaptureRequestBuilder.set(CaptureRequest.CONTROL_EFFECT_MODE, mCurrentEffect);
     mStillCaptureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
@@ -775,12 +797,12 @@ public class Camera extends Fragment implements SensorEventListener {
     // Collect the supported resolutions that are at least as big as the preview Surface
     List<Size> bigEnough = new ArrayList<>();
     // Collect the supported resolutions that are smaller than the preview Surface
-    List<Size> notBigEnough = new ArrayList<>();
+    List<Size> notBigEnough = new ArrayList <>();
     int width = aspectRatio.getWidth();
     int height = aspectRatio.getHeight();
     for (Size option : choices) {
       if (option.getWidth() <= maxWidth && option.getHeight() <= maxHeight &&
-          option.getHeight() == option.getWidth() * height / width) {
+          option.getHeight() == option.getWidth() * height / width) {   // 비율까지 맞으면
         if (option.getWidth() >= textureViewWidth &&
             option.getHeight() >= textureViewHeight) {
           bigEnough.add(option);
@@ -860,5 +882,37 @@ public class Camera extends Fragment implements SensorEventListener {
     }
   }
 
+
+  /**
+   * Shows OK/Cancel confirmation dialog about camera permission.
+   */
+  public static class ConfirmationDialog extends DialogFragment {
+
+    @Override
+    public Dialog onCreateDialog(Bundle savedInstanceState) {
+      final Fragment parent = getParentFragment();
+      return new AlertDialog.Builder(getActivity())
+          .setMessage(R.string.request_permission)
+          .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+              FragmentCompat.requestPermissions(parent,
+                  new String[]{Manifest.permission.CAMERA},
+                  REQUEST_CAMERA_PERMISSION);
+            }
+          })
+          .setNegativeButton(android.R.string.cancel,
+              new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                  Activity activity = parent.getActivity();
+                  if (activity != null) {
+                    activity.finish();
+                  }
+                }
+              })
+          .create();
+    }
+  }
 
 }
